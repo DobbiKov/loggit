@@ -5,6 +5,7 @@ use std::{
     fmt::Display,
     sync::{Arc, RwLock},
 };
+pub mod helper;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Level {
@@ -48,6 +49,10 @@ impl Display for Level {
     }
 }
 
-static CONFIG: Lazy<RwLock<Option<Config>>> = Lazy::new(|| RwLock::new(Default::default()));
+static CONFIG: Lazy<RwLock<Option<Config>>> = Lazy::new(|| {
+    RwLock::new(Some(Config {
+        ..Default::default()
+    }))
+});
 
 pub mod logger;

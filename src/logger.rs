@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use colored::Colorize;
 use formatter::{LogColor, LogFormatter};
 
@@ -63,8 +65,14 @@ pub fn set_formatting(format: String) {
 // funcs to log
 fn string_log(log_info: &LogInfo) -> String {
     let mut mess_to_print = String::new();
-    let curr_time = String::new();
-    let curr_date = String::new();
+    let ymdhms = crate::helper::seconds_to_ymdhms(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    );
+    let curr_time: String = format!("{}:{}:{}", ymdhms.3, ymdhms.4, ymdhms.5);
+    let curr_date = format!("{}:{}:{}", ymdhms.2, ymdhms.1, ymdhms.0);
     for log_part in get_log_format().parts {
         let str_to_push = match log_part.part {
             formatter::LogPart::Message => &log_info.message,
