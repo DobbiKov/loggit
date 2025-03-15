@@ -2,23 +2,50 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
     const SECONDS_IN_MINUTE: u64 = 60;
     const SECONDS_IN_HOUR: u64 = 60 * SECONDS_IN_MINUTE;
     const SECONDS_IN_DAY: u64 = 24 * SECONDS_IN_HOUR;
-    const SECONDS_IN_MONTH: u64 = 30 * SECONDS_IN_DAY; // Approximate month length
-    const SECONDS_IN_YEAR: u64 = 365 * SECONDS_IN_DAY; // Non-leap year
 
-    let years = seconds / SECONDS_IN_YEAR;
-    seconds %= SECONDS_IN_YEAR;
+    let mut year = 1970;
+    let mut month = 1;
+    let mut day = 1;
 
-    let months = seconds / SECONDS_IN_MONTH;
-    seconds %= SECONDS_IN_MONTH;
-
-    let days = seconds / SECONDS_IN_DAY;
+    let mut days = seconds / SECONDS_IN_DAY;
     seconds %= SECONDS_IN_DAY;
 
-    let hours = seconds / SECONDS_IN_HOUR;
+    let hour = seconds / SECONDS_IN_HOUR;
     seconds %= SECONDS_IN_HOUR;
 
-    let minutes = seconds / SECONDS_IN_MINUTE;
-    seconds %= SECONDS_IN_MINUTE;
+    let minute = seconds / SECONDS_IN_MINUTE;
+    let second = seconds % SECONDS_IN_MINUTE;
 
-    (years, months, days, hours, minutes, seconds)
+    let mut is_leap = |y: u64| -> bool { (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0) };
+
+    let days_in_month = |y: u64, m: u64| -> u64 {
+        match m {
+            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+            4 | 6 | 9 | 11 => 30,
+            2 => {
+                if is_leap(y) {
+                    29
+                } else {
+                    28
+                }
+            }
+            _ => panic!("Invalid month"),
+        }
+    };
+
+    // Calculate the year
+    while days >= if is_leap(year) { 366 } else { 365 } {
+        days -= if is_leap(year) { 366 } else { 365 };
+        year += 1;
+    }
+
+    // Calculate the month
+    while days >= days_in_month(year, month) {
+        days -= days_in_month(year, month);
+        month += 1;
+    }
+
+    day += days; // Remaining days count as the day of the month
+
+    (year, month, day, hour, minute, second)
 }
