@@ -1,0 +1,8 @@
+[package]
+name = "loggit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = "3.0.0"
+once_cell = "1.21.1"
