@@ -5,10 +5,8 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use colored::Colorize;
 use formatter::{LogColor, LogFormatter};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{Config, Level, CONFIG};
 //pub(crate) mod formatter;
