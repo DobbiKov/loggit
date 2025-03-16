@@ -15,7 +15,7 @@ struct LogInfo {
 }
 
 //config getters
-fn get_current_log_level() -> Level {
+fn get_log_level() -> Level {
     let config_lock = CONFIG.read().unwrap();
     if let Some(ref cfg) = *config_lock {
         cfg.level
@@ -32,8 +32,15 @@ fn get_config() -> Config {
     }
 }
 
-fn get_log_format() -> LogFormatter {
-    get_config().log_format
+fn get_log_format(level: Level) -> LogFormatter {
+    let tmp_cfg = get_config();
+    match level {
+        Level::TRACE => tmp_cfg.trace_log_format,
+        Level::DEBUG => tmp_cfg.debug_log_format,
+        Level::INFO => tmp_cfg.info_log_format,
+        Level::WARN => tmp_cfg.warn_log_format,
+        Level::ERROR => tmp_cfg.error_log_format,
+    }
 }
 
 // config setters
@@ -55,10 +62,23 @@ pub fn set_colorized(val: bool) {
         cfg.colorized = val;
     }
 }
-pub fn set_formatting(format: String) {
+pub fn set_global_formatting(format: String) {
+    set_level_formatting(Level::TRACE, format.clone());
+    set_level_formatting(Level::DEBUG, format.clone());
+    set_level_formatting(Level::INFO, format.clone());
+    set_level_formatting(Level::WARN, format.clone());
+    set_level_formatting(Level::ERROR, format);
+}
+pub fn set_level_formatting(level: Level, format: String) {
     let mut config_lock = CONFIG.write().unwrap();
     if let Some(ref mut cfg) = *config_lock {
-        cfg.log_format = LogFormatter::parse_from_string(format);
+        match level {
+            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format.clone()),
+            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format.clone()),
+            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format.clone()),
+            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format.clone()),
+            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format.clone()),
+        }
     }
 }
 
@@ -73,7 +93,7 @@ fn string_log(log_info: &LogInfo) -> String {
     );
     let curr_time: String = format!("{}:{}:{}", ymdhms.3, ymdhms.4, ymdhms.5);
     let curr_date = format!("{}:{}:{}", ymdhms.2, ymdhms.1, ymdhms.0);
-    for log_part in get_log_format().parts {
+    for log_part in get_log_format(log_info.level).parts {
         let str_to_push = match log_part.part {
             formatter::LogPart::Message => &log_info.message,
             formatter::LogPart::Time => &curr_time,
@@ -101,6 +121,7 @@ fn log_handler(log_info: LogInfo) {
         print_log(&log_info);
     }
 }
+// handles call from macro and passes deeper
 fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
     let log_info = LogInfo {
         file,
@@ -108,7 +129,7 @@ fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
         message: deb_str,
         level,
     };
-    if level >= get_current_log_level() {
+    if level >= get_log_level() {
         log_handler(log_info);
     }
 }
@@ -157,6 +178,7 @@ macro_rules! error {
         }};
     }
 
+/// Set default setting
 pub fn init() {
     let mut config = CONFIG.write().unwrap();
     *config = Some(Config {

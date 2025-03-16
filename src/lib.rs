@@ -1,7 +1,6 @@
 use logger::formatter::LogFormatter;
 use once_cell::sync::Lazy;
 use std::{
-    default,
     fmt::Display,
     sync::{Arc, RwLock},
 };
@@ -22,7 +21,11 @@ struct Config {
     level: Level,
     print_to_terminal: bool,
     colorized: bool,
-    log_format: LogFormatter,
+    trace_log_format: LogFormatter,
+    debug_log_format: LogFormatter,
+    info_log_format: LogFormatter,
+    warn_log_format: LogFormatter,
+    error_log_format: LogFormatter,
 }
 
 impl Default for Config {
@@ -31,7 +34,13 @@ impl Default for Config {
             level: Default::default(),
             print_to_terminal: true,
             colorized: false,
-            log_format: Default::default(),
+            trace_log_format: Default::default(),
+            debug_log_format: Default::default(),
+            info_log_format: Default::default(),
+            warn_log_format: Default::default(),
+            error_log_format: LogFormatter::parse_from_string(
+                "<red>[{level}]<red> <blue>({file} {line})<blue> - <red>{message}<red>".to_string(),
+            ),
         }
     }
 }
