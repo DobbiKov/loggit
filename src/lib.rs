@@ -1,3 +1,54 @@
+//! # Loggit
+//!
+//! Loggit is a lightweight logging library for Rust that provides built‑in logger macros
+//! (such as `trace!`, `debug!`, `info!`, `warn!`, and `error!`) to allow you to start logging
+//! with zero boilerplate. You can also customize the log level, format, colors, and output destination.
+//!
+//! ## Features
+//!
+//! - **Zero Setup**: Just import the library and start logging immediately.
+//! - **Customizable** logging levels and formats.
+//! - **Colorized Output**: Optionally colorize messages based on log level.
+//!
+//! ## Installation
+//!
+//! Add the following to your Cargo.toml:
+//!
+//! ```toml
+//! [dependencies]
+//! loggit = "0.1.0"
+//! ```
+//!
+//! Or use:
+//!
+//! ```shell
+//! cargo add loggit
+//! ```
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use loggit::{init, trace, debug, info, warn, error, logger::set_log_level, Level};
+//!
+//! fn main() {
+//!     // Optionally set a custom log level.
+//!     set_log_level(Level::DEBUG);
+//!
+//!     trace!("This is a trace message.");
+//!     debug!("Debug message: value = {}", 42);
+//!     info!("Informational message.");
+//!     warn!("Warning: check configuration!");
+//!     error!("Error occurred: {}", "example error");
+//! }
+//! ```
+//!
+//! ## Modules
+//!
+//! - [`logger`]: Contains functions to control logging configuration and macros to log messages.
+//! - [`helper`]: Provides time conversion utilities.
+//! - [`logger::formatter`]: Contains the log format parser and formatter definitions.
+
+
 use logger::formatter::LogFormatter;
 use once_cell::sync::Lazy;
 use std::{
@@ -7,6 +58,7 @@ use std::{
 pub mod helper;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+/// Represents the log level used throughout the application.
 pub enum Level {
     TRACE,
     DEBUG,

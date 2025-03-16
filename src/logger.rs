@@ -1,3 +1,10 @@
+//! The logger module provides configuration functions and macros for logging.
+//!
+//! You can change the log level, formatting, and enable/disable colorized output.
+//!
+//! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
+//! handlers to format and print the log message.
+
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use colored::Colorize;
@@ -14,7 +21,7 @@ struct LogInfo {
     level: Level,
 }
 
-//config getters
+// -- Getter functions for config --
 fn get_log_level() -> Level {
     let config_lock = CONFIG.read().unwrap();
     if let Some(ref cfg) = *config_lock {
@@ -43,25 +50,35 @@ fn get_log_format(level: Level) -> LogFormatter {
     }
 }
 
-// config setters
+// -- Public configuration setter functions --
+
+/// Sets the minimum log level to display.
+/// Messages with a level lower than the given level will be ignored.
 pub fn set_log_level(lvl: Level) {
     let mut config_lock = CONFIG.write().unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.level = lvl;
     }
 }
+/// Enables or disables terminal output of log messages.
+/// When set to false, log messages will not be printed to the terminal.
 pub fn set_print_to_terminal(val: bool) {
     let mut config_lock = CONFIG.write().unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.print_to_terminal = val;
     }
 }
+/// Enables or disables colorized output of log messages.
+/// If enabled, logs will be printed with colors as configured in the format.
 pub fn set_colorized(val: bool) {
     let mut config_lock = CONFIG.write().unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.colorized = val;
     }
 }
+
+/// Sets a global log formatting string for all log levels.
+/// This function updates the formatting of each level to the given template.
 pub fn set_global_formatting(format: String) {
     set_level_formatting(Level::TRACE, format.clone());
     set_level_formatting(Level::DEBUG, format.clone());
@@ -69,6 +86,10 @@ pub fn set_global_formatting(format: String) {
     set_level_formatting(Level::WARN, format.clone());
     set_level_formatting(Level::ERROR, format);
 }
+
+/// Sets a custom log formatting string for the specified log level.
+///
+/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
 pub fn set_level_formatting(level: Level, format: String) {
     let mut config_lock = CONFIG.write().unwrap();
     if let Some(ref mut cfg) = *config_lock {
@@ -82,7 +103,7 @@ pub fn set_level_formatting(level: Level, format: String) {
     }
 }
 
-// funcs to log
+// -- Internal functions for logging --
 fn string_log(log_info: &LogInfo) -> String {
     let mut mess_to_print = String::new();
     let ymdhms = crate::helper::seconds_to_ymdhms(
@@ -134,11 +155,25 @@ fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
     }
 }
 
+/// Internal function for handling log macros.
+///
+/// It is used by the public logger macros to format and output the log message.
 pub fn __debug_handler(file: &str, line: u32, deb_str: String, level: Level) {
     macro_handler(file.to_string(), line, deb_str, level);
 }
 
+// -- Publicly exported logging macros --
+
 #[macro_export]
+/// Logs a message at the TRACE level.
+/// The message is formatted using standard Rust formatting.
+///
+/// # Example
+/// ```rust
+/// use loggit::trace;
+///
+/// trace!("Trace message: {}", "details");
+/// ```
 macro_rules! trace {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
@@ -147,6 +182,15 @@ macro_rules! trace {
     }
 
 #[macro_export]
+/// Logs a message at the DEBUG level.
+/// The message is formatted using standard Rust formatting.
+///
+/// # Example
+/// ```rust
+/// use loggit::debug;
+///
+/// debug!("Debug message: value = {}", 123);
+/// ```
 macro_rules! debug {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
@@ -155,6 +199,15 @@ macro_rules! debug {
     }
 
 #[macro_export]
+/// Logs a message at the INFO level.
+/// The message is formatted using standard Rust formatting.
+///
+/// # Example
+/// ```rust
+/// use loggit::info;
+///
+/// info!("Informational message.");
+/// ```
 macro_rules! info {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
@@ -163,6 +216,15 @@ macro_rules! info {
     }
 
 #[macro_export]
+/// Logs a message at the WARN level.
+/// The message is formatted using standard Rust formatting.
+///
+/// # Example
+/// ```rust
+/// use loggit::warn;
+///
+/// warn!("Warning: check configuration!");
+/// ```
 macro_rules! warn {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
@@ -171,6 +233,15 @@ macro_rules! warn {
     }
 
 #[macro_export]
+/// Logs a message at the ERROR level.
+/// The message is formatted using standard Rust formatting.
+///
+/// # Example
+/// ```rust
+/// use loggit::error;
+///
+/// error!("Error occurred: {}", "example error");
+/// ```
 macro_rules! error {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
@@ -178,7 +249,7 @@ macro_rules! error {
         }};
     }
 
-/// Set default setting
+/// Initializes the logger with default configuration settings.
 pub fn init() {
     let mut config = CONFIG.write().unwrap();
     *config = Some(Config {
