@@ -98,10 +98,8 @@ pub(crate) struct LogFormatter {
 
 impl LogFormatter {
     pub(crate) fn parse_from_string(text: String) -> Self {
-        let symbols_struct = string_parse(text, "".to_string(), ParseSymbs::Start);
-        let symbols = parse_symbs_to_vec(symbols_struct);
-        let parts = parse_vec_of_parse_symb_to_parts(symbols).expect("Given string is incorrect!");
-        parse_parts_to_formatter(parts).expect("Given string is incorrect!")
+        let wrappers = parse_string_to_wrappers(text);
+        LogFormatter { parts: wrappers }
     }
 }
 impl Default for LogFormatter {
@@ -111,6 +109,23 @@ impl Default for LogFormatter {
         )
     }
 }
+
+/// Parse string to log_wrappers i.e Vec of log_part and assigned color to it
+pub(crate) fn parse_string_to_wrappers(text: String) -> Vec<LogFormatWrapper> {
+    let symbols_struct = string_parse(text, "".to_string(), ParseSymbs::Start);
+    let symbols = parse_symbs_to_vec(symbols_struct);
+    let parts = parse_vec_of_parse_symb_to_parts(symbols).expect("Given string is incorrect!");
+    parse_parts_to_formatter(parts).expect("Given string is incorrect!")
+}
+
+/// Parse string to log_parts
+pub(crate) fn parse_string_to_logparts(text: String) -> Vec<LogPart> {
+    let wrappers = parse_string_to_wrappers(text);
+    wrappers.into_iter().map(|x| x.part).collect()
+}
+
+// ******
+// The fundamental parser logic
 
 #[derive(Debug)]
 pub enum ParseSymbs {
@@ -155,7 +170,7 @@ enum ParsePartsToFormatterError {
 
 fn parse_parts_to_formatter(
     parts: Vec<ParseParts>,
-) -> Result<LogFormatter, ParsePartsToFormatterError> {
+) -> Result<Vec<LogFormatWrapper>, ParsePartsToFormatterError> {
     let mut res: Vec<LogFormatWrapper> = Vec::new();
     let mut curr_color: Option<LogColor> = None;
 
@@ -198,7 +213,7 @@ fn parse_parts_to_formatter(
         return Err(ParsePartsToFormatterError::IncorrectDataGiven);
     }
 
-    Ok(LogFormatter { parts: res })
+    Ok(res)
 }
 
 #[derive(Debug)]

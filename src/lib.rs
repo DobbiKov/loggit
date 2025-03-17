@@ -48,8 +48,7 @@
 //! - [`helper`]: Provides time conversion utilities.
 //! - [`logger::formatter`]: Contains the log format parser and formatter definitions.
 
-
-use logger::formatter::LogFormatter;
+use logger::{file_handler::FileFormatter, formatter::LogFormatter};
 use once_cell::sync::Lazy;
 use std::{
     fmt::Display,
@@ -69,6 +68,12 @@ pub enum Level {
 }
 
 #[derive(Clone)]
+struct FileConfig {
+    file_format: FileFormatter, // if nothing is written to the file, None
+    current_file_name: String,
+}
+
+#[derive(Clone)]
 struct Config {
     level: Level,
     print_to_terminal: bool,
@@ -78,6 +83,7 @@ struct Config {
     info_log_format: LogFormatter,
     warn_log_format: LogFormatter,
     error_log_format: LogFormatter,
+    file_config: Option<FileConfig>,
 }
 
 impl Default for Config {
@@ -93,6 +99,7 @@ impl Default for Config {
             error_log_format: LogFormatter::parse_from_string(
                 "<red>[{level}]<red> <blue>({file} {line})<blue> - <red>{message}<red>".to_string(),
             ),
+            file_config: None,
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::io::Write;
+
 pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u64) {
     const SECONDS_IN_MINUTE: u64 = 60;
     const SECONDS_IN_HOUR: u64 = 60 * SECONDS_IN_MINUTE;
@@ -48,4 +50,23 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
     day += days; // Remaining days count as the day of the month
 
     (year, month, day, hour, minute, second)
+}
+
+pub(crate) enum WriteToFileError {
+    UnexpectedError,
+}
+pub(crate) fn write_to_file(file_name: &String, text: &String) -> Result<(), WriteToFileError> {
+    let mut file = std::fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(file_name)
+        .unwrap();
+
+    if let Err(e) = writeln!(file, "{}", text) {
+        eprintln!("Couldn't write to file: {}", e);
+        Err(WriteToFileError::UnexpectedError)
+    } else {
+        Ok(())
+    }
+    //
 }

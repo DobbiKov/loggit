@@ -5,11 +5,13 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
+use file_handler::FileFormatter;
 use formatter::{LogColor, LogFormatter};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{Config, Level, CONFIG};
+use crate::{helper, Config, FileConfig, Level, CONFIG};
 //pub(crate) mod formatter;
+pub mod file_handler;
 pub mod formatter;
 
 struct LogInfo {
@@ -48,7 +50,26 @@ fn get_log_format(level: Level) -> LogFormatter {
     }
 }
 
+fn get_file_config() -> Option<FileConfig> {
+    let tmp_cfg = get_config();
+    tmp_cfg.file_config
+}
+
 // -- Public configuration setter functions --
+pub fn set_file(format: String) {
+    let file_format = FileFormatter::from_string(format);
+    let file_name = file_format.get_file_name(get_log_level());
+
+    let file_config = FileConfig {
+        file_format,
+        current_file_name: file_name,
+    };
+
+    let mut config_lock = CONFIG.write().unwrap();
+    if let Some(ref mut cfg) = *config_lock {
+        cfg.file_config = Some(file_config);
+    }
+}
 
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.
@@ -102,7 +123,7 @@ pub fn set_level_formatting(level: Level, format: String) {
 }
 
 // -- Internal functions for logging --
-fn string_log(log_info: &LogInfo) -> String {
+fn string_log(log_info: &LogInfo, colorize: bool) -> String {
     let mut mess_to_print = String::new();
     let ymdhms = crate::helper::seconds_to_ymdhms(
         SystemTime::now()
@@ -122,7 +143,7 @@ fn string_log(log_info: &LogInfo) -> String {
             formatter::LogPart::Level => &log_info.level.to_string(),
             formatter::LogPart::Text(text) => &text.clone(),
         };
-        if get_config().colorized && log_part.color.is_some() {
+        if colorize && log_part.color.is_some() {
             let colored_str = LogColor::colorize_str(str_to_push, log_part.color.unwrap());
             mess_to_print.push_str(&colored_str);
         } else {
@@ -132,14 +153,33 @@ fn string_log(log_info: &LogInfo) -> String {
     mess_to_print
 }
 fn print_log(log_info: &LogInfo) {
-    let mess_to_print = string_log(log_info);
+    let mess_to_print = string_log(log_info, get_config().colorized);
     println!("{}", mess_to_print);
+}
+fn write_file_log(log_info: &LogInfo) {
+    let file_config = get_file_config().unwrap();
+    let mess_to_print = string_log(log_info, false);
+
+    // TODO: here_ve_must_verify_the_time_and_others constraints
+    match helper::write_to_file(&file_config.current_file_name, &mess_to_print) {
+        Ok(()) => {}
+        Err(_) => {
+            println!(
+                "SOMETHING WENT WRONG WHILE TRYING TO WRITE TO A FILE! {} | {}",
+                file_config.current_file_name, mess_to_print
+            );
+        }
+    }
 }
 fn log_handler(log_info: LogInfo) {
     if get_config().print_to_terminal {
         print_log(&log_info);
     }
+    if get_config().file_config.is_some() {
+        write_file_log(&log_info);
+    }
 }
+
 // handles call from macro and passes deeper
 fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
     let log_info = LogInfo {
