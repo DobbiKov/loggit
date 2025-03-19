@@ -19,7 +19,10 @@ impl From<String> for LogColor {
             val if val == "black".to_string() => LogColor::Black,
             val if val == "white".to_string() => LogColor::White,
             val if val == "purple".to_string() => LogColor::Purple,
-            _ => panic!("Error while parsing Color!"),
+            _ => {
+                eprintln!("Incorrect color given!");
+                LogColor::White
+            }
         }
     }
 }
@@ -80,7 +83,10 @@ impl From<String> for LogPart {
             val if val == "file".to_string() => LogPart::File,
             val if val == "line".to_string() => LogPart::Line,
             val if val == "level".to_string() => LogPart::Level,
-            _ => panic!("Error while parsing part!"),
+            _ => {
+                eprintln!("Incorrect part given!");
+                LogPart::Text(String::new())
+            }
         }
     }
 }

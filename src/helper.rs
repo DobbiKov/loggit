@@ -31,7 +31,10 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
                     28
                 }
             }
-            _ => panic!("Invalid month"),
+            _ => {
+                eprintln!("Invalid month given");
+                0
+            }
         }
     };
 
@@ -56,12 +59,17 @@ pub(crate) enum WriteToFileError {
     UnexpectedError,
 }
 pub(crate) fn write_to_file(file_name: &String, text: &String) -> Result<(), WriteToFileError> {
-    let mut file = std::fs::OpenOptions::new()
+    let mut file = match std::fs::OpenOptions::new()
         .append(true)
         .create(true)
         .open(file_name)
-        .unwrap();
-
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("An error occured while trying to open the file, err: {}", e);
+            return Err(WriteToFileError::UnexpectedError);
+        }
+    };
     if let Err(e) = writeln!(file, "{}", text) {
         eprintln!("Couldn't write to file: {}", e);
         Err(WriteToFileError::UnexpectedError)

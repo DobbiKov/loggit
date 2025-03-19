@@ -61,7 +61,10 @@ impl FileFormatter {
                 LogPart::Date => &format!("{}-{}-{}", day, month, year),
                 LogPart::Level => &level.to_string(),
                 LogPart::Text(tt) => tt,
-                _ => panic!("Incorrect file format given!"),
+                _ => {
+                    eprintln!("Incrorrect part given!");
+                    ""
+                }
             };
             res.push_str(temp);
         }
