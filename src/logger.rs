@@ -7,7 +7,10 @@
 
 use file_handler::FileFormatter;
 use formatter::{LogColor, LogFormatter};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    sync::RwLockWriteGuard,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{helper, Config, FileConfig, Level, CONFIG};
 //pub(crate) mod formatter;
@@ -23,19 +26,21 @@ struct LogInfo {
 
 // -- Getter functions for config --
 fn get_log_level() -> Level {
-    let config_lock = CONFIG.read().unwrap();
-    if let Some(ref cfg) = *config_lock {
-        cfg.level
-    } else {
-        panic!("Something went wrong with getting log level!")
-    }
+    get_config().level
 }
 fn get_config() -> Config {
-    let config_lock = CONFIG.read().unwrap();
+    let config_lock = match CONFIG.read() {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Problem with getting config, here's an error: {}", e);
+            return Default::default();
+        }
+    };
     if let Some(ref cfg) = *config_lock {
         cfg.clone()
     } else {
-        panic!("Something went wrong with getting config!")
+        eprintln!("Problem with getting config!");
+        Default::default()
     }
 }
 
@@ -55,6 +60,19 @@ fn get_file_config() -> Option<FileConfig> {
     tmp_cfg.file_config
 }
 
+fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
+    match CONFIG.write() {
+        Ok(guard) => Some(guard),
+        Err(e) => {
+            eprintln!(
+                "An error while getting the config to write, here's an error: {}",
+                e
+            );
+            None
+        } // Handle error case safely
+    }
+}
+
 // -- Public configuration setter functions --
 pub fn set_file(format: String) {
     let file_format = FileFormatter::from_string(format);
@@ -65,7 +83,12 @@ pub fn set_file(format: String) {
         current_file_name: file_name,
     };
 
-    let mut config_lock = CONFIG.write().unwrap();
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_config = Some(file_config);
     }
@@ -74,7 +97,12 @@ pub fn set_file(format: String) {
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.
 pub fn set_log_level(lvl: Level) {
-    let mut config_lock = CONFIG.write().unwrap();
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.level = lvl;
     }
@@ -82,7 +110,12 @@ pub fn set_log_level(lvl: Level) {
 /// Enables or disables terminal output of log messages.
 /// When set to false, log messages will not be printed to the terminal.
 pub fn set_print_to_terminal(val: bool) {
-    let mut config_lock = CONFIG.write().unwrap();
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.print_to_terminal = val;
     }
@@ -90,7 +123,12 @@ pub fn set_print_to_terminal(val: bool) {
 /// Enables or disables colorized output of log messages.
 /// If enabled, logs will be printed with colors as configured in the format.
 pub fn set_colorized(val: bool) {
-    let mut config_lock = CONFIG.write().unwrap();
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.colorized = val;
     }
@@ -110,7 +148,12 @@ pub fn set_global_formatting(format: String) {
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
 pub fn set_level_formatting(level: Level, format: String) {
-    let mut config_lock = CONFIG.write().unwrap();
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         match level {
             Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format.clone()),
