@@ -12,7 +12,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::{helper, Config, FileConfig, Level, CONFIG};
+use crate::{
+    helper::{self, get_current_date_in_string, get_current_time_in_string},
+    Config, FileConfig, Level, CONFIG,
+};
 //pub(crate) mod formatter;
 pub mod file_handler;
 pub mod formatter;
@@ -175,14 +178,8 @@ pub fn set_level_formatting(level: Level, format: String) {
 // -- Internal functions for logging --
 fn string_log(log_info: &LogInfo, colorize: bool) -> String {
     let mut mess_to_print = String::new();
-    let ymdhms = crate::helper::seconds_to_ymdhms(
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs(),
-    );
-    let curr_time: String = format!("{}:{}:{}", ymdhms.3, ymdhms.4, ymdhms.5);
-    let curr_date = format!("{}:{}:{}", ymdhms.2, ymdhms.1, ymdhms.0);
+    let curr_time: String = get_current_time_in_string();
+    let curr_date = get_current_date_in_string();
     for log_part in get_log_format(log_info.level).parts {
         let str_to_push = match log_part.part {
             formatter::LogPart::Message => &log_info.message,

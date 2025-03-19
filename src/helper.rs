@@ -1,4 +1,30 @@
+use chrono::{self, Datelike, Timelike};
 use std::io::Write;
+
+pub(crate) fn get_current_time_in_utc() -> (u32, u32, i32, u32, u32, u32) {
+    let date_time = chrono::Utc::now();
+    let (day, month, year) = (
+        date_time.date_naive().day(),
+        date_time.date_naive().month(),
+        date_time.date_naive().year(),
+    );
+    let (hour, minute, second) = (
+        date_time.time().hour(),
+        date_time.time().minute(),
+        date_time.time().second(),
+    );
+    (day, month, year, hour, minute, second)
+}
+
+pub(crate) fn get_current_date_in_string() -> String {
+    let (day, month, year, _, _, _) = get_current_time_in_utc();
+    format!("{}-{}-{}", day, month, year)
+}
+
+pub(crate) fn get_current_time_in_string() -> String {
+    let (_, _, _, hour, minute, second) = get_current_time_in_utc();
+    format!("{}:{}:{}", hour, minute, second)
+}
 
 pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u64) {
     const SECONDS_IN_MINUTE: u64 = 60;

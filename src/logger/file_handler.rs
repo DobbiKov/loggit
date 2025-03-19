@@ -104,3 +104,37 @@ impl FileFormatter {
         Ok(FileFormatter { format: elems })
     }
 }
+
+// FileName
+pub(crate) struct FileName {
+    file_name: String,
+    file_num: Option<u32>,
+    file_extension: String,
+}
+
+pub(crate) enum FileNameFromFileFormatterError {
+    IncorrectLastPart,
+}
+impl FileName {
+    fn acceptable_file_extensions() -> Vec<String> {
+        vec!["txt", "log"]
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect()
+    }
+    pub(crate) fn increase_num(&mut self) {
+        match self.file_num {
+            None => self.file_num = Some(1),
+            Some(num) => self.file_num = Some(num + 1),
+        };
+    }
+    pub(crate) fn from_file_formatter(
+        format: FileFormatter,
+    ) -> Result<FileName, FileNameFromFileFormatterError> {
+        let txt = match format.format.last() {
+            Some(LogPart::Text(tt)) => tt,
+            _ => return Err(FileNameFromFileFormatterError::IncorrectLastPart),
+        };
+        // FINISH
+    }
+}
