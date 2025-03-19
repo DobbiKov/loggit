@@ -75,7 +75,14 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 
 // -- Public configuration setter functions --
 pub fn set_file(format: String) {
-    let file_format = FileFormatter::from_string(format);
+    let res_file_format = FileFormatter::try_from_string(format);
+    let file_format = match res_file_format {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("An error while trying to parse file format, {}", e);
+            return;
+        }
+    };
     let file_name = file_format.get_file_name(get_log_level());
 
     let file_config = FileConfig {

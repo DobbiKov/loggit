@@ -1,4 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    fmt::Display,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::Level;
 
@@ -7,6 +10,33 @@ use super::formatter::{LogFormatter, LogPart};
 #[derive(Clone)]
 pub(crate) struct FileFormatter {
     format: Vec<LogPart>,
+}
+
+#[derive(Debug)]
+pub(crate) enum FileFormatterTryFromStringError {
+    IncorrectCaracterGiven(char),
+    EmptyStringGiven,
+    NoFileExtensionProvided,
+    IncorrectFormatPartGiven,
+}
+impl Display for FileFormatterTryFromStringError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mess = match self {
+            FileFormatterTryFromStringError::IncorrectCaracterGiven(ch) => {
+                format!("An incrorrect caracter given: {}", ch)
+            }
+            FileFormatterTryFromStringError::EmptyStringGiven => {
+                "An empty string was provided!".to_string()
+            }
+            FileFormatterTryFromStringError::NoFileExtensionProvided => {
+                "No file extension provided".to_string()
+            }
+            FileFormatterTryFromStringError::IncorrectFormatPartGiven => {
+                "An incrorrect part was provided".to_string()
+            }
+        };
+        write!(f, "{}", mess)
+    }
 }
 
 impl FileFormatter {
@@ -37,30 +67,37 @@ impl FileFormatter {
         }
         res
     }
-    pub(crate) fn from_string(format: String) -> FileFormatter {
-        if format.contains("<") || format.contains(">") {
-            panic!("The '<' and '>' are not allowed for a file name!");
+    fn forbidden_caracters() -> [char; 4] {
+        ['<', '>', '&', '%']
+    }
+    pub(crate) fn try_from_string(
+        format: String,
+    ) -> Result<FileFormatter, FileFormatterTryFromStringError> {
+        for ch in FileFormatter::forbidden_caracters() {
+            if format.contains(ch) {
+                return Err(FileFormatterTryFromStringError::IncorrectCaracterGiven(ch));
+            }
         }
         let elems = crate::logger::formatter::parse_string_to_logparts(format);
         let last_elem = match elems.last() {
-            None => panic!("You passed incorrect string!"),
+            None => return Err(FileFormatterTryFromStringError::EmptyStringGiven),
             Some(el) => el,
         };
         let text = match &last_elem {
             super::formatter::LogPart::Text(t) => t,
-            _ => panic!("The file extension must be provided!"),
+            _ => return Err(FileFormatterTryFromStringError::NoFileExtensionProvided),
         };
         if !text.contains(".") {
-            panic!("The file extension must be provided!");
+            return Err(FileFormatterTryFromStringError::NoFileExtensionProvided);
         }
         if text.len() == 1 || text.ends_with(".") {
-            panic!("incorrect extension provided!");
+            return Err(FileFormatterTryFromStringError::NoFileExtensionProvided);
         }
         for elem in &elems {
             if !FileFormatter::is_part_authorized(&elem) {
-                panic!("The file format is incorrect!");
+                return Err(FileFormatterTryFromStringError::IncorrectFormatPartGiven);
             }
         }
-        FileFormatter { format: elems }
+        Ok(FileFormatter { format: elems })
     }
 }
