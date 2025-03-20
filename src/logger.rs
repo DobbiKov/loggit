@@ -86,7 +86,8 @@ pub fn set_file(format: String) {
             return;
         }
     };
-    let file_name = file_format.get_file_name(get_log_level());
+    //let file_name = file_format.get_file_name(get_log_level());
+    let file_name = String::new(); //temp!
 
     let file_config = FileConfig {
         file_format,

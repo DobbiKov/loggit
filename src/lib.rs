@@ -28,7 +28,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use loggit::{init, trace, debug, info, warn, error, logger::set_log_level, Level};
+//! use loggit::{logger::init, trace, debug, info, warn, error, logger::set_log_level, Level};
 //!
 //! fn main() {
 //!     // Optionally set a custom log level.
@@ -55,6 +55,9 @@ use std::{
     sync::{Arc, RwLock},
 };
 pub mod helper;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 /// Represents the log level used throughout the application.
