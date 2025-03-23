@@ -5,7 +5,7 @@ use crate::{helper, Level};
 use crate::logger::formatter::LogPart;
 
 use super::file_formatter::FileFormatter;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct FileName {
     file_name: String,
     file_num: Option<u32>,
@@ -108,12 +108,19 @@ impl FileName {
             file_extension: extension.to_string(),
         })
     }
+    pub(crate) fn get_full_file_name(&self) -> String {
+        String::from(self.to_owned())
+    }
 }
 impl From<FileName> for String {
     fn from(value: FileName) -> Self {
         let mut txt = value.file_name;
         match value.file_num {
-            Some(num) => txt.push_str(&num.to_string()),
+            Some(num) => {
+                txt.push_str("(");
+                txt.push_str(&num.to_string());
+                txt.push_str("}");
+            }
             None => {}
         };
         txt.push_str(".");

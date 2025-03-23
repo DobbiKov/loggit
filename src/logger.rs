@@ -5,12 +5,10 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
-use file_handler::FileFormatter;
+use crate::logger::file_handler::file_formatter::FileFormatter;
+use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
-use std::{
-    sync::RwLockWriteGuard,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::sync::RwLockWriteGuard;
 
 use crate::{
     helper::{self, get_current_date_in_string, get_current_time_in_string},
@@ -58,7 +56,7 @@ fn get_log_format(level: Level) -> LogFormatter {
     }
 }
 
-fn get_file_config() -> Option<FileConfig> {
+fn get_file_config() -> Option<FileManager> {
     let tmp_cfg = get_config();
     tmp_cfg.file_config
 }
@@ -78,20 +76,12 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 
 // -- Public configuration setter functions --
 pub fn set_file(format: String) {
-    let res_file_format = FileFormatter::try_from_string(format);
-    let file_format = match res_file_format {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("An error while trying to parse file format, {}", e);
+    let file_config = match FileManager::init_from_string(format, get_config()) {
+        Some(r) => r,
+        None => {
+            eprintln!("Couldn't establish file config!");
             return;
         }
-    };
-    //let file_name = file_format.get_file_name(get_log_level());
-    let file_name = String::new(); //temp!
-
-    let file_config = FileConfig {
-        file_format,
-        current_file_name: file_name,
     };
 
     let config_lock = get_write_config();
@@ -209,12 +199,13 @@ fn write_file_log(log_info: &LogInfo) {
     let mess_to_print = string_log(log_info, false);
 
     // TODO: here_ve_must_verify_the_time_and_others constraints
-    match helper::write_to_file(&file_config.current_file_name, &mess_to_print) {
+    match helper::write_to_file(&file_config.get_file_name(), &mess_to_print) {
         Ok(()) => {}
         Err(_) => {
             println!(
                 "SOMETHING WENT WRONG WHILE TRYING TO WRITE TO A FILE! {} | {}",
-                file_config.current_file_name, mess_to_print
+                file_config.get_file_name(),
+                mess_to_print
             );
         }
     }
