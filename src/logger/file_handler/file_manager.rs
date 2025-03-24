@@ -11,7 +11,7 @@ use zip::{
     CompressionMethod, ZipWriter,
 };
 
-use crate::Config;
+use crate::{helper, Config};
 
 use super::{file_formatter::FileFormatter, file_name::FileName};
 
@@ -44,6 +44,7 @@ impl FileManager {
             file_constraints: Default::default(),
         })
     }
+    /// Returns full current file name (that already exists) in a String
     pub(crate) fn get_file_name(&self) -> String {
         self.file_name.get_full_file_name()
     }
@@ -228,8 +229,17 @@ impl FileManager {
                 return;
             }
             Ok(r) if !r => {
-                todo!(); //create new file
-                         //return;
+                // file doesn't exist
+                match File::create(&curr_file_name) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!(
+                            "Couldn't create a file {} due to the next reason: {}",
+                            &curr_file_name, e
+                        );
+                        return;
+                    }
+                }
             }
             _ => {}
         };
@@ -287,7 +297,14 @@ impl FileManager {
         }
     }
     pub(crate) fn write_log(&mut self, mess: String, config: Config) {
-        todo!()
+        self.verify_constraints(&config);
+        let f_name = self.get_file_name();
+        if let Err(e) = helper::write_to_file(&f_name, &mess) {
+            eprintln!(
+                "Couldn't write to the file {} due to the next reason: {}",
+                &f_name, e
+            );
+        }
     }
 }
 

@@ -6,7 +6,7 @@
 //! handlers to format and print the log message.
 
 use crate::logger::file_handler::file_formatter::FileFormatter;
-use file_handler::file_manager::FileManager;
+use file_handler::file_manager::{self, FileManager};
 use formatter::{LogColor, LogFormatter};
 use std::sync::RwLockWriteGuard;
 
@@ -75,6 +75,8 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 }
 
 // -- Public configuration setter functions --
+//
+// file
 pub fn set_file(format: String) {
     let file_manager = match FileManager::init_from_string(format, get_config()) {
         Some(r) => r,
@@ -92,6 +94,25 @@ pub fn set_file(format: String) {
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(file_manager);
+    }
+}
+pub fn set_compression(ctype: String) {
+    let f_manager = get_file_manager();
+    if f_manager.is_none() {
+        eprintln!("Can't set a compression when the file isn't set!");
+        return;
+    }
+    let mut f_manager = f_manager.unwrap();
+    f_manager.set_compression(ctype);
+
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
+    if let Some(ref mut cfg) = *config_lock {
+        cfg.file_manager = Some(f_manager);
     }
 }
 
@@ -195,10 +216,19 @@ fn print_log(log_info: &LogInfo) {
     println!("{}", mess_to_print);
 }
 fn write_file_log(log_info: &LogInfo) {
-    let file_manager = get_file_manager().unwrap();
+    let mut file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
-    // TODO: FILE MANAGER WRITE
+    file_manager.write_log(mess_to_print, get_config());
+
+    // file manager can be updated, (for example change of file) thus it needs to be updated in the
+    // config
+    let w_conf = get_write_config();
+    if let Some(mut temp_cfg) = w_conf {
+        if let Some(ref mut cfg) = *temp_cfg {
+            cfg.file_manager = Some(file_manager)
+        }
+    }
     // TODO: here_ve_must_verify_the_time_and_others constraints
     //match helper::write_to_file(&file_config.get_file_name(), &mess_to_print) {
     //    Ok(()) => {}

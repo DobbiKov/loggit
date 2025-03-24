@@ -1,5 +1,5 @@
 use chrono::{self, Datelike, Timelike};
-use std::io::Write;
+use std::{fmt::Display, io::Write};
 
 pub(crate) fn get_current_time_in_utc() -> (u32, u32, i32, u32, u32, u32) {
     let date_time = chrono::Utc::now();
@@ -81,8 +81,18 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
     (year, month, day, hour, minute, second)
 }
 
+#[derive(Debug)]
 pub(crate) enum WriteToFileError {
     UnexpectedError,
+}
+impl Display for WriteToFileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WriteToFileError::UnexpectedError => {
+                write!(f, "unexpected error")
+            }
+        }
+    }
 }
 pub(crate) fn write_to_file(file_name: &String, text: &String) -> Result<(), WriteToFileError> {
     let mut file = match std::fs::OpenOptions::new()
