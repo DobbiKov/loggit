@@ -86,7 +86,7 @@ struct Config {
     info_log_format: LogFormatter,
     warn_log_format: LogFormatter,
     error_log_format: LogFormatter,
-    file_config: Option<FileManager>,
+    file_manager: Option<FileManager>,
 }
 
 impl Default for Config {
@@ -102,7 +102,7 @@ impl Default for Config {
             error_log_format: LogFormatter::parse_from_string(
                 "<red>[{level}]<red> <blue>({file} {line})<blue> - <red>{message}<red>".to_string(),
             ),
-            file_config: None,
+            file_manager: None,
         }
     }
 }

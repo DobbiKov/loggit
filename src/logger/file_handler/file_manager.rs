@@ -1,6 +1,15 @@
-use std::{io::Read, os::unix::fs::MetadataExt};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    os::unix::fs::MetadataExt,
+    path::{Path, PathBuf},
+};
 
 use chrono::Timelike;
+use zip::{
+    write::{FileOptions, SimpleFileOptions},
+    CompressionMethod, ZipWriter,
+};
 
 use crate::Config;
 
@@ -37,6 +46,9 @@ impl FileManager {
     }
     pub(crate) fn get_file_name(&self) -> String {
         self.file_name.get_full_file_name()
+    }
+    pub(crate) fn remove_rotations(&mut self) {
+        self.file_constraints.rotation = Vec::new();
     }
     pub(crate) fn add_rotation(&mut self, string: String) -> bool {
         let rot_type = match RotationType::try_from_string(string) {
@@ -97,8 +109,11 @@ impl FileManager {
             }
         };
     }
+    fn get_path_to_compression_foler() -> String {
+        "./loggit_archives/".to_string()
+    }
     pub(crate) fn verify_arichive_dir() -> Result<bool, ()> {
-        let folder_path = "./loggit_archives/";
+        let folder_path = &FileManager::get_path_to_compression_foler();
         match std::fs::exists(folder_path) {
             Err(e) => {
                 eprintln!("Couldn't verify the existence of the archives folder due to the next reason: {}", e);
@@ -117,12 +132,93 @@ impl FileManager {
             },
         }
     }
+    fn compress_zip(&self, path: &str) {
+        let folder_path = &FileManager::get_path_to_compression_foler();
+        let path_to_zip = format!("{}/{}", folder_path, path);
+        let zip_file_path = Path::new(&path_to_zip);
+        let zip_file = match File::create(zip_file_path) {
+            Err(e) => {
+                eprintln!("Couldn't create zip archive due to the next reason: {}", e);
+                return;
+            }
+            Ok(f) => f,
+        };
+
+        let mut zip = ZipWriter::new(zip_file);
+
+        // Define the files you want to compress.
+        let files_to_compress: Vec<PathBuf> = vec![
+            PathBuf::from(path),
+            // Add more files as needed
+        ];
+
+        // Set compression options (e.g., compression method)
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::DEFLATE);
+
+        // Iterate through the files and add them to the ZIP archive.
+        for file_path in &files_to_compress {
+            let file = match File::open(file_path) {
+                Err(e) => {
+                    eprintln!(
+                        "Couldn't open the file {} to compress due to the next reason: {}",
+                        path, e
+                    );
+                    return;
+                }
+                Ok(f) => f,
+            };
+            let file_name = file_path.file_name().unwrap().to_str().unwrap();
+
+            // Adding the file to the ZIP archive.
+            match zip.start_file(file_name, options) {
+                Ok(r) => {}
+                Err(e) => {
+                    eprintln!("Couldn't start archiving due to the next reason: {}", e);
+                    return;
+                }
+            };
+
+            let mut buffer = Vec::new();
+            match std::io::copy(&mut file.take(u64::MAX), &mut buffer) {
+                Err(e) => {
+                    eprintln!("Couldn't copy the contents from the file {} to the archive due to the next reason: {}", path, e);
+                    return;
+                }
+                Ok(_) => {}
+            };
+
+            match zip.write_all(&buffer) {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!(
+                        "Couldn't write all the contents of the file {} due to the next reason: {}",
+                        path, e
+                    );
+                    return;
+                }
+            };
+        }
+
+        match zip.finish() {
+            Err(e) => {
+                eprintln!("Couldn't finish archiving due to the next reason: {}", e);
+                return;
+            }
+            Ok(_) => {}
+        };
+
+        println!("Files compressed successfully to {:?}", zip_file_path);
+    }
     pub(crate) fn compress_file(&self, path: &str) {
         if FileManager::verify_arichive_dir().is_err() {
             eprintln!("Couldn't compress file due to the error listed above!");
             return;
         }
-        todo!()
+        if let Some(compr_t) = &self.file_constraints.compression {
+            match compr_t {
+                CompressionType::Zip => self.compress_zip(path),
+            }
+        }
     }
     pub(crate) fn verify_constraints(&mut self, config: &Config) {
         let curr_file_name = self.file_name.get_full_file_name();
@@ -189,6 +285,9 @@ impl FileManager {
                 }
             }
         }
+    }
+    pub(crate) fn write_log(&mut self, mess: String, config: Config) {
+        todo!()
     }
 }
 

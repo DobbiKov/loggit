@@ -56,9 +56,9 @@ fn get_log_format(level: Level) -> LogFormatter {
     }
 }
 
-fn get_file_config() -> Option<FileManager> {
+fn get_file_manager() -> Option<FileManager> {
     let tmp_cfg = get_config();
-    tmp_cfg.file_config
+    tmp_cfg.file_manager
 }
 
 fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
@@ -76,7 +76,7 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 
 // -- Public configuration setter functions --
 pub fn set_file(format: String) {
-    let file_config = match FileManager::init_from_string(format, get_config()) {
+    let file_manager = match FileManager::init_from_string(format, get_config()) {
         Some(r) => r,
         None => {
             eprintln!("Couldn't establish file config!");
@@ -91,7 +91,7 @@ pub fn set_file(format: String) {
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
-        cfg.file_config = Some(file_config);
+        cfg.file_manager = Some(file_manager);
     }
 }
 
@@ -195,26 +195,27 @@ fn print_log(log_info: &LogInfo) {
     println!("{}", mess_to_print);
 }
 fn write_file_log(log_info: &LogInfo) {
-    let file_config = get_file_config().unwrap();
+    let file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
+    // TODO: FILE MANAGER WRITE
     // TODO: here_ve_must_verify_the_time_and_others constraints
-    match helper::write_to_file(&file_config.get_file_name(), &mess_to_print) {
-        Ok(()) => {}
-        Err(_) => {
-            println!(
-                "SOMETHING WENT WRONG WHILE TRYING TO WRITE TO A FILE! {} | {}",
-                file_config.get_file_name(),
-                mess_to_print
-            );
-        }
-    }
+    //match helper::write_to_file(&file_config.get_file_name(), &mess_to_print) {
+    //    Ok(()) => {}
+    //    Err(_) => {
+    //        println!(
+    //            "SOMETHING WENT WRONG WHILE TRYING TO WRITE TO A FILE! {} | {}",
+    //            file_config.get_file_name(),
+    //            mess_to_print
+    //        );
+    //    }
+    //}
 }
 fn log_handler(log_info: LogInfo) {
     if get_config().print_to_terminal {
         print_log(&log_info);
     }
-    if get_config().file_config.is_some() {
+    if get_config().file_manager.is_some() {
         write_file_log(&log_info);
     }
 }
