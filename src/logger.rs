@@ -115,6 +115,29 @@ pub fn set_compression(ctype: String) {
         cfg.file_manager = Some(f_manager);
     }
 }
+pub fn add_rotation(constraint: String) {
+    let f_manager = get_file_manager();
+    if f_manager.is_none() {
+        eprintln!("Can't set a compression when the file isn't set!");
+        return;
+    }
+    let mut f_manager = f_manager.unwrap();
+
+    if !f_manager.add_rotation(constraint) {
+        eprintln!("Incorrect value to the rotation!");
+        return;
+    }
+
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        eprintln!("An error while getting the config to write!");
+        return;
+    }
+    let mut config_lock = config_lock.unwrap();
+    if let Some(ref mut cfg) = *config_lock {
+        cfg.file_manager = Some(f_manager);
+    }
+}
 
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.

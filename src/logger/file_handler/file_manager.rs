@@ -135,7 +135,7 @@ impl FileManager {
     }
     fn compress_zip(&self, path: &str) {
         let folder_path = &FileManager::get_path_to_compression_foler();
-        let path_to_zip = format!("{}/{}", folder_path, path);
+        let path_to_zip = format!("{}/{}.zip", folder_path, path);
         let zip_file_path = Path::new(&path_to_zip);
         let zip_file = match File::create(zip_file_path) {
             Err(e) => {
@@ -208,7 +208,7 @@ impl FileManager {
             Ok(_) => {}
         };
 
-        println!("Files compressed successfully to {:?}", zip_file_path);
+        //println!("Files compressed successfully to {:?}", zip_file_path);
     }
     pub(crate) fn compress_file(&self, path: &str) {
         if FileManager::verify_arichive_dir().is_err() {
@@ -431,12 +431,12 @@ impl Rotation {
                 if curr_h < h || (curr_h == h && curr_m < m) {
                     // if next rotation is today
                     let unix: u64 = now.timestamp().try_into().unwrap_or(0);
-                    let secs_curr = (curr_h * 60 * 60) + (curr_m * 60);
-                    let secs_desirable = (h * 60 * 60) + (m * 60);
+                    let secs_curr = ((curr_h as u64) * 60 * 60) + ((curr_m as u64) * 60);
+                    let secs_desirable = ((h as u64) * 60 * 60) + ((m as u64) * 60);
                     let diff = secs_desirable - secs_curr;
                     Rotation {
                         rotation_type: rot_type,
-                        next_rotation: unix + (diff as u64),
+                        next_rotation: unix + diff,
                     }
                 } else {
                     //tomorrow
