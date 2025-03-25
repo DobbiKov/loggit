@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Read, Write},
+    io::{self, Read, Write},
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
@@ -20,6 +20,17 @@ pub(crate) struct FileManager {
     file_format: FileFormatter,
     file_name: FileName,
     file_constraints: FileConstraints,
+}
+
+pub(crate) enum CompressFileError {
+    UnableToCreateZipFile,
+    UnableToOpenFileToCompress,
+    UnableToStartZipArchiving,
+    UnableToCopyContents,
+    UnableToWriteToArchive,
+    UnableToFinishArchivation,
+    UnableToGetCompressionSettings,
+    InaccessibleArchivationDirectory,
 }
 
 impl FileManager {
@@ -133,14 +144,14 @@ impl FileManager {
             },
         }
     }
-    fn compress_zip(&self, path: &str) {
+    fn compress_zip(&self, path: &str) -> Result<(), CompressFileError> {
         let folder_path = &FileManager::get_path_to_compression_foler();
         let path_to_zip = format!("{}/{}.zip", folder_path, path);
         let zip_file_path = Path::new(&path_to_zip);
         let zip_file = match File::create(zip_file_path) {
             Err(e) => {
                 eprintln!("Couldn't create zip archive due to the next reason: {}", e);
-                return;
+                return Err(CompressFileError::UnableToCreateZipFile);
             }
             Ok(f) => f,
         };
@@ -164,7 +175,7 @@ impl FileManager {
                         "Couldn't open the file {} to compress due to the next reason: {}",
                         path, e
                     );
-                    return;
+                    return Err(CompressFileError::UnableToOpenFileToCompress);
                 }
                 Ok(f) => f,
             };
@@ -175,7 +186,7 @@ impl FileManager {
                 Ok(r) => {}
                 Err(e) => {
                     eprintln!("Couldn't start archiving due to the next reason: {}", e);
-                    return;
+                    return Err(CompressFileError::UnableToStartZipArchiving);
                 }
             };
 
@@ -183,7 +194,7 @@ impl FileManager {
             match std::io::copy(&mut file.take(u64::MAX), &mut buffer) {
                 Err(e) => {
                     eprintln!("Couldn't copy the contents from the file {} to the archive due to the next reason: {}", path, e);
-                    return;
+                    return Err(CompressFileError::UnableToCopyContents);
                 }
                 Ok(_) => {}
             };
@@ -195,7 +206,7 @@ impl FileManager {
                         "Couldn't write all the contents of the file {} due to the next reason: {}",
                         path, e
                     );
-                    return;
+                    return Err(CompressFileError::UnableToWriteToArchive);
                 }
             };
         }
@@ -203,22 +214,26 @@ impl FileManager {
         match zip.finish() {
             Err(e) => {
                 eprintln!("Couldn't finish archiving due to the next reason: {}", e);
-                return;
+                return Err(CompressFileError::UnableToFinishArchivation);
             }
             Ok(_) => {}
         };
 
+        Ok(())
+
         //println!("Files compressed successfully to {:?}", zip_file_path);
     }
-    pub(crate) fn compress_file(&self, path: &str) {
+    pub(crate) fn compress_file(&self, path: &str) -> Result<(), CompressFileError> {
         if FileManager::verify_arichive_dir().is_err() {
             eprintln!("Couldn't compress file due to the error listed above!");
-            return;
+            return Err(CompressFileError::InaccessibleArchivationDirectory);
         }
         if let Some(compr_t) = &self.file_constraints.compression {
             match compr_t {
                 CompressionType::Zip => self.compress_zip(path),
             }
+        } else {
+            Err(CompressFileError::UnableToGetCompressionSettings)
         }
     }
     pub(crate) fn verify_constraints(&mut self, config: &Config) {
@@ -277,7 +292,14 @@ impl FileManager {
                         self.file_constraints.rotation[idx] = new_rot;
                         if last_idx == -1 {
                             self.create_new_file(config);
-                            self.compress_file(&curr_file_name);
+                            if self.compress_file(&curr_file_name).is_ok() {
+                                if let Err(e) = FileManager::delete_file(&curr_file_name) {
+                                    eprintln!(
+                                        "Couldn't delete log file {} due to the next reason: {}",
+                                        &curr_file_name, e
+                                    );
+                                }
+                            }
                             last_idx = idx as i32;
                         }
                     }
@@ -288,13 +310,23 @@ impl FileManager {
                         self.file_constraints.rotation[idx] = new_rot;
                         if last_idx == -1 {
                             self.create_new_file(config);
-                            self.compress_file(&curr_file_name);
+                            if self.compress_file(&curr_file_name).is_ok() {
+                                if let Err(e) = FileManager::delete_file(&curr_file_name) {
+                                    eprintln!(
+                                        "Couldn't delete log file {} due to the next reason: {}",
+                                        &curr_file_name, e
+                                    );
+                                }
+                            }
                             last_idx = idx as i32;
                         }
                     }
                 }
             }
         }
+    }
+    pub(crate) fn delete_file(path: &str) -> io::Result<()> {
+        std::fs::remove_file(path)
     }
     pub(crate) fn write_log(&mut self, mess: String, config: Config) {
         self.verify_constraints(&config);
