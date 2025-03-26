@@ -124,6 +124,8 @@ impl FileManager {
     fn get_path_to_compression_foler() -> String {
         "./loggit_archives/".to_string()
     }
+    /// Returns true if there's the directory to store archives to, false if there's no one and
+    /// creates it
     pub(crate) fn verify_arichive_dir() -> Result<bool, ()> {
         let folder_path = &FileManager::get_path_to_compression_foler();
         match std::fs::exists(folder_path) {
@@ -144,6 +146,7 @@ impl FileManager {
             },
         }
     }
+    /// compresses a file by the given path in a zip archive
     fn compress_zip(&self, path: &str) -> Result<(), CompressFileError> {
         let folder_path = &FileManager::get_path_to_compression_foler();
         let path_to_zip = format!("{}/{}.zip", folder_path, path);
@@ -223,6 +226,8 @@ impl FileManager {
 
         //println!("Files compressed successfully to {:?}", zip_file_path);
     }
+    /// Compresses a file by the given path depending on the set compression algortithm in the
+    /// config
     pub(crate) fn compress_file(&self, path: &str) -> Result<(), CompressFileError> {
         if FileManager::verify_arichive_dir().is_err() {
             eprintln!("Couldn't compress file due to the error listed above!");
@@ -236,6 +241,8 @@ impl FileManager {
             Err(CompressFileError::UnableToGetCompressionSettings)
         }
     }
+    /// verifying file constraints (rotation time and file size) and if one of the constraints
+    /// doesn't pass, it creates new file (archives the changed file if it's set in the config)
     pub(crate) fn verify_constraints(&mut self, config: &Config) {
         let curr_file_name = self.file_name.get_full_file_name();
         match std::fs::exists(&curr_file_name) {
