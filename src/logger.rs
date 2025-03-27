@@ -12,7 +12,7 @@ use std::sync::RwLockWriteGuard;
 
 use crate::{
     helper::{self, get_current_date_in_string, get_current_time_in_string},
-    Config, FileConfig, Level, CONFIG,
+    Config, Level, CONFIG,
 };
 //pub(crate) mod formatter;
 pub mod file_handler;
@@ -242,7 +242,16 @@ fn write_file_log(log_info: &LogInfo) {
     let mut file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
-    file_manager.write_log(mess_to_print, get_config());
+    let res = file_manager.write_log(mess_to_print, get_config());
+    match res {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!(
+                "Couldn't write a log to the file due to the next error: {}",
+                e
+            );
+        }
+    }
 
     // file manager can be updated, (for example change of file) thus it needs to be updated in the
     // config

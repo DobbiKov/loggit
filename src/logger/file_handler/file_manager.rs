@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs::File,
     io::{self, Read, Write},
     os::unix::fs::MetadataExt,
@@ -31,6 +32,55 @@ pub(crate) enum CompressFileError {
     UnableToFinishArchivation,
     UnableToGetCompressionSettings,
     InaccessibleArchivationDirectory,
+}
+
+pub(crate) enum VerifyConstraintsError {
+    UnableToVerifyFileExistence,
+    UnableToCreateFile,
+    UnableToOpenFile,
+    UnableToGetFileMetadata,
+    UnableToDeleteOldLogFile,
+    UnableToCompressFile,
+    UnableToCreateNewFile,
+}
+pub(crate) enum VerifyConstraintsRes {
+    ConstraintsPassed,
+    NewFileCreated,
+}
+pub(crate) enum WriteLogError {
+    UnableToWriteToFile,
+}
+impl Display for WriteLogError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                WriteLogError::UnableToWriteToFile => "unable to write to file",
+            }
+        )
+    }
+}
+pub(crate) enum CreateNewFileError {
+    UnableToVerifyFileExistence,
+    UnableToCreateFileIO,
+    UnableToGetFileName,
+}
+
+impl Display for CreateNewFileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                CreateNewFileError::UnableToVerifyFileExistence =>
+                    "unable to verify that the file exists",
+                CreateNewFileError::UnableToCreateFileIO =>
+                    "unable to create a file due to IO error",
+                CreateNewFileError::UnableToGetFileName => "unable to get a name of the file",
+            }
+        )
+    }
 }
 
 impl FileManager {
@@ -89,12 +139,12 @@ impl FileManager {
         self.file_constraints.compression = None;
     }
 
-    pub(crate) fn create_new_file(&mut self, config: &Config) {
+    pub(crate) fn create_new_file(&mut self, config: &Config) -> Result<(), CreateNewFileError> {
         let curr_file_name = self.file_name.get_full_file_name();
         match std::fs::exists(&curr_file_name) {
             Err(e) => {
                 eprintln!("An error occured while trying to find a file: {}", e);
-                return;
+                Err(CreateNewFileError::UnableToVerifyFileExistence)
             }
             Ok(r) if !r => {
                 let new_f_name =
@@ -102,24 +152,24 @@ impl FileManager {
                         Ok(r) => r,
                         Err(e) => {
                             eprintln!("Couldn't get file name due to the next reason: {}", e);
-                            return;
+                            return Err(CreateNewFileError::UnableToGetFileName);
                         }
                     };
                 self.file_name = new_f_name;
                 let f_name_str = self.file_name.get_full_file_name();
                 match std::fs::File::create(f_name_str) {
-                    Ok(_) => {}
+                    Ok(_) => Ok(()),
                     Err(e) => {
                         eprintln!("Couldn't create a file due to the next reason: {}", e);
-                        return;
+                        Err(CreateNewFileError::UnableToCreateFileIO)
                     }
                 }
             }
             _ => {
                 self.file_name.increase_num();
-                self.create_new_file(config);
+                self.create_new_file(config)
             }
-        };
+        }
     }
     fn get_path_to_compression_foler() -> String {
         "./loggit_archives/".to_string()
@@ -243,12 +293,15 @@ impl FileManager {
     }
     /// verifying file constraints (rotation time and file size) and if one of the constraints
     /// doesn't pass, it creates new file (archives the changed file if it's set in the config)
-    pub(crate) fn verify_constraints(&mut self, config: &Config) {
+    pub(crate) fn verify_constraints(
+        &mut self,
+        config: &Config,
+    ) -> Result<VerifyConstraintsRes, VerifyConstraintsError> {
         let curr_file_name = self.file_name.get_full_file_name();
         match std::fs::exists(&curr_file_name) {
             Err(e) => {
                 eprintln!("An error occured while trying to find a file: {}", e);
-                return;
+                return Err(VerifyConstraintsError::UnableToVerifyFileExistence);
             }
             Ok(r) if !r => {
                 // file doesn't exist
@@ -259,7 +312,7 @@ impl FileManager {
                             "Couldn't create a file {} due to the next reason: {}",
                             &curr_file_name, e
                         );
-                        return;
+                        return Err(VerifyConstraintsError::UnableToCreateFile);
                     }
                 }
             }
@@ -271,7 +324,7 @@ impl FileManager {
                     "Couldn't open the file {} due to the next reason: {}",
                     &curr_file_name, e
                 );
-                return;
+                return Err(VerifyConstraintsError::UnableToOpenFile);
             }
             Ok(f) => f,
         };
@@ -281,12 +334,54 @@ impl FileManager {
                     "Couldn't get the file's {} metadata due to the next reason: {}",
                     &curr_file_name, e
                 );
-                return;
+                return Err(VerifyConstraintsError::UnableToGetFileMetadata);
             }
             Ok(data) => data.size(),
         };
-        let mut last_idx = -1;
-        for idx in 0..self.file_constraints.rotation.len() {
+        let mut last_idx: i32 = -1;
+        // we need last_idx for: if we found not satsfying constraint, than we create a new file,
+        // thus we have to update all the constraints we had, to set the to the original values,
+        // as a consequence, we have last_idx, if it's not -1, than on last_idx rotation we created
+        // new file and update all the constraints to initial values
+        let mut idx: usize = 0;
+        let mut res: Result<VerifyConstraintsRes, VerifyConstraintsError> =
+            Ok(VerifyConstraintsRes::ConstraintsPassed);
+        loop {
+            if (idx) >= (self.file_constraints.rotation.len()) && last_idx == -1 {
+                // if we haven't
+                // met any
+                // unverified
+                // constraints
+                // and reached
+                // the end, we
+                // stop
+                break;
+            }
+            if (idx as i32) == last_idx {
+                // if we reached last index it means we restarted from 0,
+                // then we ran through the right part from last_idx and
+                // though the left as well
+                break;
+            }
+            if idx >= (self.file_constraints.rotation.len()) && last_idx != -1 {
+                // if we meet the
+                // end and
+                // last_idx is not
+                // -1, then we
+                // should go
+                // through the
+                // left part from
+                // last_idx again
+                idx = 0;
+            }
+            if last_idx == 0 {
+                // if last_idx == 0 then the first one wasn't satisfied and it was
+                // immediately handled
+                break;
+            }
+
+            //each rot logic
+
             let rot = self.file_constraints.rotation[idx];
             match rot.rotation_type {
                 RotationType::Period(_) | RotationType::Time(_, _) => {
@@ -298,14 +393,28 @@ impl FileManager {
                         let new_rot = Rotation::init_from_rotation_type(rot.rotation_type);
                         self.file_constraints.rotation[idx] = new_rot;
                         if last_idx == -1 {
-                            self.create_new_file(config);
+                            match self.create_new_file(config) {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    eprintln!(
+                                        "Couldn't create a new file due to the next reason: {}",
+                                        e
+                                    );
+                                    return Err(VerifyConstraintsError::UnableToCreateNewFile);
+                                }
+                            }
                             if self.compress_file(&curr_file_name).is_ok() {
                                 if let Err(e) = FileManager::delete_file(&curr_file_name) {
                                     eprintln!(
                                         "Couldn't delete log file {} due to the next reason: {}",
                                         &curr_file_name, e
                                     );
+                                    res = Err(VerifyConstraintsError::UnableToDeleteOldLogFile);
+                                } else {
+                                    res = Ok(VerifyConstraintsRes::NewFileCreated)
                                 }
+                            } else {
+                                res = Err(VerifyConstraintsError::UnableToCompressFile)
                             }
                             last_idx = idx as i32;
                         }
@@ -316,33 +425,53 @@ impl FileManager {
                         let new_rot = Rotation::init_from_rotation_type(rot.rotation_type);
                         self.file_constraints.rotation[idx] = new_rot;
                         if last_idx == -1 {
-                            self.create_new_file(config);
+                            match self.create_new_file(config) {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    eprintln!(
+                                        "Couldn't create a new file due to the next reason: {}",
+                                        e
+                                    );
+                                    return Err(VerifyConstraintsError::UnableToCreateNewFile);
+                                }
+                            }
                             if self.compress_file(&curr_file_name).is_ok() {
                                 if let Err(e) = FileManager::delete_file(&curr_file_name) {
                                     eprintln!(
                                         "Couldn't delete log file {} due to the next reason: {}",
                                         &curr_file_name, e
                                     );
+                                    res = Err(VerifyConstraintsError::UnableToDeleteOldLogFile);
+                                } else {
+                                    res = Ok(VerifyConstraintsRes::NewFileCreated)
                                 }
+                            } else {
+                                res = Err(VerifyConstraintsError::UnableToCompressFile)
                             }
                             last_idx = idx as i32;
                         }
                     }
                 }
             }
+            // end
+            idx += 1;
         }
+        res
     }
     pub(crate) fn delete_file(path: &str) -> io::Result<()> {
         std::fs::remove_file(path)
     }
-    pub(crate) fn write_log(&mut self, mess: String, config: Config) {
-        self.verify_constraints(&config);
+    pub(crate) fn write_log(&mut self, mess: String, config: Config) -> Result<(), WriteLogError> {
+        let constrs = self.verify_constraints(&config);
         let f_name = self.get_file_name();
         if let Err(e) = helper::write_to_file(&f_name, &mess) {
             eprintln!(
                 "Couldn't write to the file {} due to the next reason: {}",
                 &f_name, e
             );
+            Err(WriteLogError::UnableToWriteToFile)
+        } else {
+            Ok(())
         }
     }
 }
