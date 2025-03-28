@@ -137,6 +137,9 @@ The default configuration already provides sensible defaults, so you can get sta
 
 Contributions and suggestions are welcome! Feel free to open issues or submit pull requests to help improve LogGit.
 
+## TODO
+- [ ] getting config from json/env files
+
 ## License
 
 LogGit is licensed under the MIT License.
