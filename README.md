@@ -2,8 +2,6 @@
 
 Loggit is a lightweight, easy-to-use logging library for Rust. It provides ready-to-use logger macros that let you start logging with zero boilerplate. You simply import and use it; no additional setup is required for basic usage. However, if you need more control, you can customize the logging format, colors, and minimum logging level.
 
-## Documenation
-A complete user documentation can be found [here](./docs/DOC_PREVIEW.md)
 
 ## Features
 
@@ -177,6 +175,9 @@ fn main() {
 }
 ````
 
+## Documenation
+A complete user documentation can be found [here](./docs/DOC_PREVIEW.md)
+
 ## Configuration
 
 Internally, LogGit uses a simple configuration structure which holds:
@@ -193,6 +194,9 @@ The default configuration already provides sensible defaults, so you can get sta
 ## Contributing
 
 Contributions and suggestions are welcome! Feel free to open issues or submit pull requests to help improve LogGit.
+
+## Release notes
+In order to read release notes for each version, click [here](./RELEASE_NOTES.md)
 
 ## TODO
 - [ ] getting config from json/env files
