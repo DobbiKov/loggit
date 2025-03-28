@@ -16,7 +16,7 @@ use crate::{helper, Config};
 
 use super::{file_formatter::FileFormatter, file_name::FileName};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct FileManager {
     file_format: FileFormatter,
     file_name: FileName,
@@ -61,6 +61,7 @@ impl Display for WriteLogError {
         )
     }
 }
+#[derive(Debug)]
 pub(crate) enum CreateNewFileError {
     UnableToVerifyFileExistence,
     UnableToCreateFileIO,
@@ -576,7 +577,7 @@ impl RotationType {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct Rotation {
     rotation_type: RotationType,
     next_rotation: u64,
@@ -626,7 +627,7 @@ impl Rotation {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum CompressionType {
     Zip,
 }
@@ -641,7 +642,7 @@ impl CompressionType {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub(crate) struct FileConstraints {
     compression: Option<CompressionType>,
     rotation: Vec<Rotation>,

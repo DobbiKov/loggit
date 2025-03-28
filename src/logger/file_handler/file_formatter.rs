@@ -1,7 +1,7 @@
 use crate::logger::formatter::LogPart;
 use std::fmt::Display;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct FileFormatter {
     pub(crate) format: Vec<LogPart>,
 }

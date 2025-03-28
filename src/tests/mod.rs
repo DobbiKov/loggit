@@ -1,28 +1,32 @@
-use crate::logger::file_handler::file_manager;
+mod file_manager;
 use crate::Level;
 
-use crate::*;
-use crate::logger::init;
 use crate::helper;
 use crate::logger::file_handler::file_formatter::FileFormatter;
-use crate::logger::file_handler::file_name::FileName;
 use crate::logger::file_handler::file_manager::{FileManager, RotationType};
+use crate::logger::file_handler::file_name::FileName;
 use crate::logger::formatter::{parse_string_to_logparts, LogPart};
+use crate::logger::init;
+use crate::*;
 use std::fs;
 
 #[test]
 fn parse_rotation_type() {
-    let res = file_manager::RotationType::try_from_string("dfsa week".to_string());
+    let res = crate::logger::file_handler::file_manager::RotationType::try_from_string(
+        "dfsa week".to_string(),
+    );
     assert_eq!(res, None);
 
-    let res = file_manager::RotationType::try_from_string("23 week".to_string());
+    let res = crate::logger::file_handler::file_manager::RotationType::try_from_string(
+        "23 week".to_string(),
+    );
     assert_eq!(
         res,
-        Some(file_manager::RotationType::Period(60 * 60 * 24 * 7 * 23))
+        Some(
+            crate::logger::file_handler::file_manager::RotationType::Period(60 * 60 * 24 * 7 * 23)
+        )
     )
 }
-
-
 
 #[test]
 fn test_file_formatter_valid() {
@@ -157,7 +161,7 @@ fn test_set_file_and_compression_and_rotation() {
     let config_state = CONFIG.read().unwrap();
     let cfg = config_state.as_ref().unwrap();
     assert!(cfg.file_manager.is_some());
-    
+
     // Optionally, clean up any generated file if needed.
     let file_name = cfg.file_manager.as_ref().unwrap().get_file_name();
     if fs::metadata(&file_name).is_ok() {
