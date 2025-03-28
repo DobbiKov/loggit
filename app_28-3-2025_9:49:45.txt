@@ -1,0 +1,3 @@
+[INFO] (src/tests/mod.rs 121) - Test info message
+[WARN] (src/tests/mod.rs 122) - Test warn message
+[ERROR] (src/tests/mod.rs 123) - Test error message
