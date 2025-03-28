@@ -2,12 +2,18 @@
 
 Loggit is a lightweight, easy-to-use logging library for Rust. It provides ready-to-use logger macros that let you start logging with zero boilerplate. You simply import and use it; no additional setup is required for basic usage. However, if you need more control, you can customize the logging format, colors, and minimum logging level.
 
+## Documenation
+A complete user documentation can be found [here](./docs/DOC_PREVIEW.md)
+
 ## Features
 
 - **Zero Setup**: Just import the library and start logging.
 - **Customizable**: Change log formats, colors, and logging levels.
 - **Macros Provided**: Includes `trace!`, `debug!`, `info!`, `warn!`, and `error!`.
 - **Flexible Formatting**: Use custom templates with placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
+- **Saving log to files**: Save your logs to files automaticaly by specifying filename format 
+- **File rotation**: Rotate your files by specifying time period or size
+- **Compress used files**: Save your space by compressing used log files
 
 ## Installation
 
@@ -178,6 +184,9 @@ Internally, LogGit uses a simple configuration structure which holds:
 - **Terminal Output**: A flag that determines if logs are printed to the terminal.
 - **Colorization**: A flag to enable or disable colored output.
 - **Custom Formats**: Individual formatters for each log level.
+- **Custom file names**: A format of a name that a file will take
+- **File rotation**: How oftenly will the file be changed
+- **Compression method**: To save space, you can specify the compression method. 
 
 The default configuration already provides sensible defaults, so you can get started right away. Customization is available for those who need advanced logging setups.
 
