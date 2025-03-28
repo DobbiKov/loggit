@@ -123,6 +123,54 @@ fn main() {
 }
 ````
 
+### Setting up logging to the file
+
+Enable save all your logs to a file
+
+````rust
+use loggit::logger::set_file;
+
+fn main() {
+    // provide file name
+    set_file("file_name.txt");
+}
+````
+
+You can choose a format for the file name:
+
+````rust
+use loggit::logger::set_file;
+
+fn main() {
+    // provide file name
+    set_file("{level}-log-on-{date}.txt");
+}
+````
+
+Choose how oftenly you change your file
+
+````rust
+use loggit::logger::{set_file, add_rotation};
+
+fn main() {
+    // provide file name
+    set_file("{level}-log-on-{date}.txt");
+    add_rotation("1 week"); // change the file every week
+    add_rotation("5 MB"); // max file size 5 MB, then again change of the file
+}
+````
+
+Save your space by compressing log files
+````rust
+use loggit::logger::{set_file, set_compression};
+
+fn main() {
+    // provide file name
+    set_file("{level}-log-on-{date}.txt");
+    set_compression("zip");
+}
+````
+
 ## Configuration
 
 Internally, LogGit uses a simple configuration structure which holds:

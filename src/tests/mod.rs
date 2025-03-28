@@ -153,9 +153,9 @@ fn test_rotation_type_parsing() {
 fn test_set_file_and_compression_and_rotation() {
     // Initialize logger and configure file handling.
     init();
-    logger::set_file("app_{date}_{time}.txt".to_string());
-    logger::set_compression("zip".to_string());
-    logger::add_rotation("1 day".to_string());
+    logger::set_file("app_{date}_{time}.txt");
+    logger::set_compression("zip");
+    logger::add_rotation("1 day");
 
     // Check that the internal config now includes a file_manager.
     let config_state = CONFIG.read().unwrap();

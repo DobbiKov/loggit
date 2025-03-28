@@ -77,7 +77,8 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 // -- Public configuration setter functions --
 //
 // file
-pub fn set_file(format: String) {
+pub fn set_file(format: &str) {
+    let format = format.to_string();
     let file_manager = match FileManager::init_from_string(format, get_config()) {
         Some(r) => r,
         None => {
@@ -96,14 +97,14 @@ pub fn set_file(format: String) {
         cfg.file_manager = Some(file_manager);
     }
 }
-pub fn set_compression(ctype: String) {
+pub fn set_compression(ctype: &str) {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
         eprintln!("Can't set a compression when the file isn't set!");
         return;
     }
     let mut f_manager = f_manager.unwrap();
-    f_manager.set_compression(ctype);
+    f_manager.set_compression(ctype.to_string());
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -115,7 +116,7 @@ pub fn set_compression(ctype: String) {
         cfg.file_manager = Some(f_manager);
     }
 }
-pub fn add_rotation(constraint: String) {
+pub fn add_rotation(constraint: &str) {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
         eprintln!("Can't set a compression when the file isn't set!");
@@ -123,7 +124,7 @@ pub fn add_rotation(constraint: String) {
     }
     let mut f_manager = f_manager.unwrap();
 
-    if !f_manager.add_rotation(constraint) {
+    if !f_manager.add_rotation(constraint.to_string()) {
         eprintln!("Incorrect value to the rotation!");
         return;
     }
@@ -181,18 +182,19 @@ pub fn set_colorized(val: bool) {
 
 /// Sets a global log formatting string for all log levels.
 /// This function updates the formatting of each level to the given template.
-pub fn set_global_formatting(format: String) {
-    set_level_formatting(Level::TRACE, format.clone());
-    set_level_formatting(Level::DEBUG, format.clone());
-    set_level_formatting(Level::INFO, format.clone());
-    set_level_formatting(Level::WARN, format.clone());
+pub fn set_global_formatting(format: &str) {
+    set_level_formatting(Level::TRACE, format);
+    set_level_formatting(Level::DEBUG, format);
+    set_level_formatting(Level::INFO, format);
+    set_level_formatting(Level::WARN, format);
     set_level_formatting(Level::ERROR, format);
 }
 
 /// Sets a custom log formatting string for the specified log level.
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
-pub fn set_level_formatting(level: Level, format: String) {
+pub fn set_level_formatting(level: Level, format: &str) {
+    let format = format.to_string();
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
