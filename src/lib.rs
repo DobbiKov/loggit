@@ -54,7 +54,7 @@ use std::{
     fmt::Display,
     sync::{Arc, RwLock},
 };
-pub mod helper;
+pub(crate) mod helper;
 
 #[cfg(test)]
 mod tests;

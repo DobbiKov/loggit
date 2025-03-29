@@ -76,7 +76,21 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 
 // -- Public configuration setter functions --
 //
-// file
+
+/// Makes all logs to be saved to files. The files take names accordinlgy to the provided format.
+///
+///  Configures Loggit to write logs to a file. The `format` string is used to generate the file name and must include a file extension. The format may include placeholders such as:
+///  - `{time}` – Current time.
+///  - `{date}` – Current date.
+///  - `{level}` - Current loggin level.
+///  - Other literal text.
+///
+///- **Allowed values:**  
+///  - The format string **must** end with a text section containing a file extension (e.g. `.txt` or `.log`).  
+///  - Any forbidden characters such as `<`, `>`, `&`, or `%` will cause configuration to fail.  
+///  - *Examples:*  
+///    - `"app_{date}_{time}.txt"`  
+///    - `"{level}-log-on-{date}.log"`
 pub fn set_file(format: &str) {
     let format = format.to_string();
     let file_manager = match FileManager::init_from_string(format, get_config()) {
@@ -97,6 +111,15 @@ pub fn set_file(format: &str) {
         cfg.file_manager = Some(file_manager);
     }
 }
+
+///Enables file compression for log archival.
+///
+///- **Description:**  
+///  Sets the compression type for log files. After file logging is configured, you can enable compression to archive old logs.
+///
+///- **Allowed values:**  
+///  - Accepts only a single allowed value: `"zip"`.  
+///  - Any other string will output an error and leave the compression configuration unchanged.
 pub fn set_compression(ctype: &str) {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
@@ -116,6 +139,27 @@ pub fn set_compression(ctype: &str) {
         cfg.file_manager = Some(f_manager);
     }
 }
+
+///Adds a new constraint for rotating log files.
+///
+///- **Description:**  
+///  Adds a rotation strategy so that log files are rotated based on either time or file size. When a log file “expires” under the configured constraint, a new file is automatically created (and optionally compressed).
+///
+///- **Allowed values:**  
+///  The `constraint` string can be in one of the following formats:
+///  - **Period rotation:**  
+///    - Numeric value followed by a unit:  
+///      - `"1 hour"`, `"2 day"`, `"33 week"`, `"6 month"`, `"12 year"`  
+///      - The unit is case sensitive and must match exactly (e.g. `" hour"`, `" day"`, etc.).
+///  - **Time-based rotation:**  
+///    - Time in a 24‑hour format using a colon separator:  
+///      - `"HH:MM"` (e.g. `"12:30"`).
+///  - **Size-based rotation:**  
+///    - Numeric value followed by a size unit:  
+///      - `"500 KB"`, `"5 MB"`, `"1 GB"`, or `"2 TB"`  
+///      - Note the space before the unit.
+///
+///- If an incorrect value is provided, the rotation is not added and an error message is logged.
 pub fn add_rotation(constraint: &str) {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
