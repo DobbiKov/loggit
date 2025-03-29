@@ -6,9 +6,13 @@
 //!
 //! ## Features
 //!
-//! - **Zero Setup**: Just import the library and start logging immediately.
-//! - **Customizable** logging levels and formats.
-//! - **Colorized Output**: Optionally colorize messages based on log level.
+//!- **Zero Setup**: Just import the library and start logging.
+//!- **Customizable**: Change log formats, colors, and logging levels.
+//!- **Macros Provided**: Includes `trace!`, `debug!`, `info!`, `warn!`, and `error!`.
+//!- **Flexible Formatting**: Use custom templates with placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
+//!- **Saving log to files**: Save your logs to files automaticaly by specifying filename format
+//!- **File rotation**: Rotate your files by specifying time period or size
+//!- **Compress used files**: Save your space by compressing used log files
 //!
 //! ## Installation
 //!
@@ -16,7 +20,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! loggit = "0.1.0"
+//! loggit = "0.1.1"
 //! ```
 //!
 //! Or use:
@@ -45,8 +49,6 @@
 //! ## Modules
 //!
 //! - [`logger`]: Contains functions to control logging configuration and macros to log messages.
-//! - [`helper`]: Provides time conversion utilities.
-//! - [`logger::formatter`]: Contains the log format parser and formatter definitions.
 
 use logger::{file_handler::file_manager::FileManager, formatter::LogFormatter};
 use once_cell::sync::Lazy;
