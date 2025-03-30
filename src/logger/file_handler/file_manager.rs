@@ -1,12 +1,13 @@
 use std::{
     fmt::Display,
     fs::File,
-    io::{self, Read, Write},
+    io::{self, BufReader, Read, Write},
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
 use chrono::Timelike;
+use thiserror::Error;
 use zip::{
     write::{FileOptions, SimpleFileOptions},
     CompressionMethod, ZipWriter,
@@ -61,27 +62,14 @@ impl Display for WriteLogError {
         )
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum CreateNewFileError {
+    #[error("unable to verify that the file exists")]
     UnableToVerifyFileExistence,
-    UnableToCreateFileIO,
+    #[error("IO error occured: {0}")]
+    UnableToCreateFileIO(#[from] std::io::Error),
+    #[error("unable to get the file name")]
     UnableToGetFileName,
-}
-
-impl Display for CreateNewFileError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CreateNewFileError::UnableToVerifyFileExistence =>
-                    "unable to verify that the file exists",
-                CreateNewFileError::UnableToCreateFileIO =>
-                    "unable to create a file due to IO error",
-                CreateNewFileError::UnableToGetFileName => "unable to get a name of the file",
-            }
-        )
-    }
 }
 
 impl FileManager {
@@ -141,34 +129,34 @@ impl FileManager {
     }
 
     pub(crate) fn create_new_file(&mut self, config: &Config) -> Result<(), CreateNewFileError> {
-        let curr_file_name = self.file_name.get_full_file_name();
-        match std::fs::exists(&curr_file_name) {
-            Err(e) => {
-                eprintln!("An error occured while trying to find a file: {}", e);
-                Err(CreateNewFileError::UnableToVerifyFileExistence)
-            }
-            Ok(r) if !r => {
-                let new_f_name =
-                    match FileName::from_file_formatter(self.file_format.clone(), config.level) {
-                        Ok(r) => r,
+        loop {
+            match std::fs::exists(self.file_name.get_full_file_name()) {
+                Err(e) => {
+                    eprintln!("An error occured while trying to find a file: {}", e);
+                    return Err(CreateNewFileError::UnableToVerifyFileExistence);
+                }
+                Ok(r) if !r => {
+                    let new_f_name =
+                        match FileName::from_file_formatter(self.file_format.clone(), config.level)
+                        {
+                            Ok(r) => r,
+                            Err(e) => {
+                                eprintln!("Couldn't get file name due to the next reason: {}", e);
+                                return Err(CreateNewFileError::UnableToGetFileName);
+                            }
+                        };
+                    self.file_name = new_f_name;
+                    let f_name_str = self.file_name.get_full_file_name();
+                    match std::fs::File::create(f_name_str) {
+                        Ok(_) => return Ok(()),
                         Err(e) => {
-                            eprintln!("Couldn't get file name due to the next reason: {}", e);
-                            return Err(CreateNewFileError::UnableToGetFileName);
+                            return Err(CreateNewFileError::UnableToCreateFileIO(e));
                         }
-                    };
-                self.file_name = new_f_name;
-                let f_name_str = self.file_name.get_full_file_name();
-                match std::fs::File::create(f_name_str) {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        eprintln!("Couldn't create a file due to the next reason: {}", e);
-                        Err(CreateNewFileError::UnableToCreateFileIO)
                     }
                 }
-            }
-            _ => {
-                self.file_name.increase_num();
-                self.create_new_file(config)
+                _ => {
+                    self.file_name.increase_num();
+                }
             }
         }
     }
@@ -199,80 +187,22 @@ impl FileManager {
     }
     /// compresses a file by the given path in a zip archive
     fn compress_zip(&self, path: &str) -> Result<(), CompressFileError> {
-        let folder_path = &FileManager::get_path_to_compression_foler();
-        let path_to_zip = format!("{}/{}.zip", folder_path, path);
-        let zip_file_path = Path::new(&path_to_zip);
-        let zip_file = match File::create(zip_file_path) {
-            Err(e) => {
-                eprintln!("Couldn't create zip archive due to the next reason: {}", e);
-                return Err(CompressFileError::UnableToCreateZipFile);
-            }
-            Ok(f) => f,
-        };
-
+        let zip_file_path = format!("./loggit_archives/{}.zip", path);
+        let zip_file = std::fs::File::create(&zip_file_path)
+            .map_err(|_| CompressFileError::UnableToCreateZipFile)?;
         let mut zip = ZipWriter::new(zip_file);
-
-        // Define the files you want to compress.
-        let files_to_compress: Vec<PathBuf> = vec![
-            PathBuf::from(path),
-            // Add more files as needed
-        ];
-
-        // Set compression options (e.g., compression method)
         let options = SimpleFileOptions::default().compression_method(CompressionMethod::DEFLATE);
 
-        // Iterate through the files and add them to the ZIP archive.
-        for file_path in &files_to_compress {
-            let file = match File::open(file_path) {
-                Err(e) => {
-                    eprintln!(
-                        "Couldn't open the file {} to compress due to the next reason: {}",
-                        path, e
-                    );
-                    return Err(CompressFileError::UnableToOpenFileToCompress);
-                }
-                Ok(f) => f,
-            };
-            let file_name = file_path.file_name().unwrap().to_str().unwrap();
+        let file =
+            std::fs::File::open(path).map_err(|_| CompressFileError::UnableToOpenFileToCompress)?;
+        let mut reader = BufReader::new(file);
 
-            // Adding the file to the ZIP archive.
-            match zip.start_file(file_name, options) {
-                Ok(r) => {}
-                Err(e) => {
-                    eprintln!("Couldn't start archiving due to the next reason: {}", e);
-                    return Err(CompressFileError::UnableToStartZipArchiving);
-                }
-            };
-
-            let mut buffer = Vec::new();
-            match std::io::copy(&mut file.take(u64::MAX), &mut buffer) {
-                Err(e) => {
-                    eprintln!("Couldn't copy the contents from the file {} to the archive due to the next reason: {}", path, e);
-                    return Err(CompressFileError::UnableToCopyContents);
-                }
-                Ok(_) => {}
-            };
-
-            match zip.write_all(&buffer) {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!(
-                        "Couldn't write all the contents of the file {} due to the next reason: {}",
-                        path, e
-                    );
-                    return Err(CompressFileError::UnableToWriteToArchive);
-                }
-            };
-        }
-
-        match zip.finish() {
-            Err(e) => {
-                eprintln!("Couldn't finish archiving due to the next reason: {}", e);
-                return Err(CompressFileError::UnableToFinishArchivation);
-            }
-            Ok(_) => {}
-        };
-
+        zip.start_file(path, options)
+            .map_err(|_| CompressFileError::UnableToStartZipArchiving)?;
+        std::io::copy(&mut reader, &mut zip)
+            .map_err(|_| CompressFileError::UnableToCopyContents)?;
+        zip.finish()
+            .map_err(|_| CompressFileError::UnableToFinishArchivation)?;
         Ok(())
 
         //println!("Files compressed successfully to {:?}", zip_file_path);
