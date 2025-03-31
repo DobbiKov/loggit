@@ -1,17 +1,12 @@
 use std::{
-    fmt::Display,
     fs::File,
-    io::{self, BufReader, Read, Write},
+    io::{self, BufReader},
     os::unix::fs::MetadataExt,
-    path::{Path, PathBuf},
 };
 
 use chrono::Timelike;
 use thiserror::Error;
-use zip::{
-    write::{FileOptions, SimpleFileOptions},
-    CompressionMethod, ZipWriter,
-};
+use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
 use crate::{helper, Config};
 
@@ -24,43 +19,51 @@ pub(crate) struct FileManager {
     file_constraints: FileConstraints,
 }
 
+#[derive(Error, Debug)]
 pub(crate) enum CompressFileError {
+    #[error("unable to create a zip file")]
     UnableToCreateZipFile,
+    #[error("unable to open file to compress")]
     UnableToOpenFileToCompress,
+    #[error("unable to start zip archiving")]
     UnableToStartZipArchiving,
+    #[error("unable to copy the contents of the file")]
     UnableToCopyContents,
+    #[error("unable to write to archive")]
     UnableToWriteToArchive,
+    #[error("unable to finish archivation")]
     UnableToFinishArchivation,
+    #[error("unable to get compression settings")]
     UnableToGetCompressionSettings,
+    #[error("inaccessible archivation directory")]
     InaccessibleArchivationDirectory,
 }
 
+#[derive(Error, Debug)]
 pub(crate) enum VerifyConstraintsError {
+    #[error("unable to verify file existence")]
     UnableToVerifyFileExistence,
+    #[error("unable to create file")]
     UnableToCreateFile,
+    #[error("unable to open file")]
     UnableToOpenFile,
+    #[error("unable to get file metadata")]
     UnableToGetFileMetadata,
+    #[error("unable to delete old log files")]
     UnableToDeleteOldLogFile,
+    #[error("uable to compress file")]
     UnableToCompressFile,
+    #[error("unable to create a new file")]
     UnableToCreateNewFile,
 }
 pub(crate) enum VerifyConstraintsRes {
     ConstraintsPassed,
     NewFileCreated,
 }
+#[derive(Debug, Error)]
 pub(crate) enum WriteLogError {
+    #[error("unable to write to the file")]
     UnableToWriteToFile,
-}
-impl Display for WriteLogError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                WriteLogError::UnableToWriteToFile => "unable to write to file",
-            }
-        )
-    }
 }
 #[derive(Debug, Error)]
 pub(crate) enum CreateNewFileError {

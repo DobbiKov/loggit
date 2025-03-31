@@ -1,36 +1,23 @@
 use crate::logger::formatter::LogPart;
 use std::fmt::Display;
 
+use thiserror::Error;
+
 #[derive(Clone, Debug)]
 pub(crate) struct FileFormatter {
     pub(crate) format: Vec<LogPart>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum FileFormatterTryFromStringError {
+    #[error("an incrorrect caracter given: {0}")]
     IncorrectCaracterGiven(char),
+    #[error("An empty string was provided!")]
     EmptyStringGiven,
+    #[error("No file extension provided")]
     NoFileExtensionProvided,
+    #[error("An incrorrect part was provided")]
     IncorrectFormatPartGiven,
-}
-impl Display for FileFormatterTryFromStringError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mess = match self {
-            FileFormatterTryFromStringError::IncorrectCaracterGiven(ch) => {
-                format!("An incrorrect caracter given: {}", ch)
-            }
-            FileFormatterTryFromStringError::EmptyStringGiven => {
-                "An empty string was provided!".to_string()
-            }
-            FileFormatterTryFromStringError::NoFileExtensionProvided => {
-                "No file extension provided".to_string()
-            }
-            FileFormatterTryFromStringError::IncorrectFormatPartGiven => {
-                "An incrorrect part was provided".to_string()
-            }
-        };
-        write!(f, "{}", mess)
-    }
 }
 
 impl FileFormatter {

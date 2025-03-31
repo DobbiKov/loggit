@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum LogColor {
     Red,
@@ -168,9 +170,11 @@ impl ParseParts {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 enum ParsePartsToFormatterError {
+    #[error("unexpected error")]
     UnexpectedError,
+    #[error("incorrect data given")]
     IncorrectDataGiven,
 }
 
@@ -222,9 +226,11 @@ fn parse_parts_to_formatter(
     Ok(res)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ParseSymbToPartsError {
+    #[error("incorrect data given")]
     IncorrectDataGiven,
+    #[error("unexpected error")]
     UnexpectedError,
 }
 

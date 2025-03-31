@@ -1,10 +1,9 @@
-use std::fmt::Display;
-
 use crate::{helper, Level};
 
 use crate::logger::formatter::LogPart;
 
 use super::file_formatter::FileFormatter;
+use thiserror::Error;
 #[derive(Debug, Clone)]
 pub(crate) struct FileName {
     file_name: String,
@@ -12,24 +11,16 @@ pub(crate) struct FileName {
     file_extension: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum FileNameFromFileFormatterError {
+    #[error("no fomrat provided")]
     NoFormatProvided,
+    #[error("incorrect last part")]
     IncorrectLastPart,
+    #[error("no file extension provided")]
     NoFileExtensionProvided,
+    #[error("incorrect file extension")]
     IncorrectFileExtension,
-}
-
-impl Display for FileNameFromFileFormatterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mess = match self {
-            FileNameFromFileFormatterError::NoFormatProvided => "no format provided!",
-            FileNameFromFileFormatterError::IncorrectLastPart => "incorrect last part!",
-            FileNameFromFileFormatterError::NoFileExtensionProvided => "no file extension provided",
-            FileNameFromFileFormatterError::IncorrectFileExtension => "incorrect file extension",
-        };
-        write!(f, "{}", mess)
-    }
 }
 
 impl FileName {
