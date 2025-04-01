@@ -6,11 +6,17 @@ use std::{
 
 use chrono::Timelike;
 use thiserror::Error;
-use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
+use zip::{result::ZipError, write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
-use crate::{helper, Config};
+use crate::{
+    helper::{self, WriteToFileError},
+    Config,
+};
 
-use super::{file_formatter::FileFormatter, file_name::FileName};
+use super::{
+    file_formatter::FileFormatter,
+    file_name::{FileName, FileNameFromFileFormatterError},
+};
 
 #[derive(Clone, Debug)]
 pub(crate) struct FileManager {
@@ -21,40 +27,40 @@ pub(crate) struct FileManager {
 
 #[derive(Error, Debug)]
 pub(crate) enum CompressFileError {
-    #[error("unable to create a zip file")]
-    UnableToCreateZipFile,
-    #[error("unable to open file to compress")]
-    UnableToOpenFileToCompress,
-    #[error("unable to start zip archiving")]
-    UnableToStartZipArchiving,
-    #[error("unable to copy the contents of the file")]
-    UnableToCopyContents,
+    #[error("unable to create a zip file: {0}")]
+    UnableToCreateZipFile(std::io::Error),
+    #[error("unable to open file to compress: {0}")]
+    UnableToOpenFileToCompress(std::io::Error),
+    #[error("unable to start zip archiving: {0}")]
+    UnableToStartZipArchiving(ZipError),
+    #[error("unable to copy the contents of the file: {0}")]
+    UnableToCopyContents(std::io::Error),
     #[error("unable to write to archive")]
     UnableToWriteToArchive,
-    #[error("unable to finish archivation")]
-    UnableToFinishArchivation,
+    #[error("unable to finish archivation: {0}")]
+    UnableToFinishArchivation(ZipError),
     #[error("unable to get compression settings")]
     UnableToGetCompressionSettings,
-    #[error("inaccessible archivation directory")]
-    InaccessibleArchivationDirectory,
+    #[error("inaccessible archivation directory: {0}")]
+    InaccessibleArchivationDirectory(std::io::Error),
 }
 
 #[derive(Error, Debug)]
 pub(crate) enum VerifyConstraintsError {
-    #[error("unable to verify file existence")]
-    UnableToVerifyFileExistence,
-    #[error("unable to create file")]
-    UnableToCreateFile,
-    #[error("unable to open file")]
-    UnableToOpenFile,
-    #[error("unable to get file metadata")]
-    UnableToGetFileMetadata,
-    #[error("unable to delete old log files")]
-    UnableToDeleteOldLogFile,
+    #[error("unable to verify file existence {0}")]
+    UnableToVerifyFileExistence(std::io::Error),
+    #[error("unable to create file {0} {1}")]
+    UnableToCreateFile(String, std::io::Error),
+    #[error("unable to open file: {0} {1}")]
+    UnableToOpenFile(String, std::io::Error),
+    #[error("unable to get file metadata: {0} {1}")]
+    UnableToGetFileMetadata(String, std::io::Error),
+    #[error("unable to delete old log files: {0} {1}")]
+    UnableToDeleteOldLogFile(String, std::io::Error),
     #[error("uable to compress file")]
     UnableToCompressFile,
-    #[error("unable to create a new file")]
-    UnableToCreateNewFile,
+    #[error("unable to create a new file: {0}")]
+    UnableToCreateNewFile(CreateNewFileError),
 }
 pub(crate) enum VerifyConstraintsRes {
     ConstraintsPassed,
@@ -62,17 +68,17 @@ pub(crate) enum VerifyConstraintsRes {
 }
 #[derive(Debug, Error)]
 pub(crate) enum WriteLogError {
-    #[error("unable to write to the file")]
-    UnableToWriteToFile,
+    #[error("unable to write to the file: {0}")]
+    UnableToWriteToFile(WriteToFileError),
 }
 #[derive(Debug, Error)]
 pub(crate) enum CreateNewFileError {
-    #[error("unable to verify that the file exists")]
-    UnableToVerifyFileExistence,
+    #[error("unable to verify that the file exists: {0}")]
+    UnableToVerifyFileExistence(std::io::Error),
     #[error("IO error occured: {0}")]
-    UnableToCreateFileIO(#[from] std::io::Error),
-    #[error("unable to get the file name")]
-    UnableToGetFileName,
+    UnableToCreateFileIO(std::io::Error),
+    #[error("unable to get the file name: {0}")]
+    UnableToGetFileName(FileNameFromFileFormatterError),
 }
 
 impl FileManager {
@@ -135,8 +141,7 @@ impl FileManager {
         loop {
             match std::fs::exists(self.file_name.get_full_file_name()) {
                 Err(e) => {
-                    eprintln!("An error occured while trying to find a file: {}", e);
-                    return Err(CreateNewFileError::UnableToVerifyFileExistence);
+                    return Err(CreateNewFileError::UnableToVerifyFileExistence(e));
                 }
                 Ok(r) if !r => {
                     let new_f_name =
@@ -144,8 +149,7 @@ impl FileManager {
                         {
                             Ok(r) => r,
                             Err(e) => {
-                                eprintln!("Couldn't get file name due to the next reason: {}", e);
-                                return Err(CreateNewFileError::UnableToGetFileName);
+                                return Err(CreateNewFileError::UnableToGetFileName(e));
                             }
                         };
                     self.file_name = new_f_name;
@@ -168,13 +172,10 @@ impl FileManager {
     }
     /// Returns true if there's the directory to store archives to, false if there's no one and
     /// creates it
-    pub(crate) fn verify_arichive_dir() -> Result<bool, ()> {
+    pub(crate) fn verify_arichive_dir() -> Result<bool, std::io::Error> {
         let folder_path = &FileManager::get_path_to_compression_foler();
         match std::fs::exists(folder_path) {
-            Err(e) => {
-                eprintln!("Couldn't verify the existence of the archives folder due to the next reason: {}", e);
-                Err(())
-            }
+            Err(e) => Err(e),
             Ok(r) if r => Ok(true),
             _ => match std::fs::create_dir(folder_path) {
                 Ok(_) => Ok(true),
@@ -183,7 +184,7 @@ impl FileManager {
                         "Couldn't create an archives folder due to the next reason: {}",
                         e
                     );
-                    Err(())
+                    Err(e)
                 }
             },
         }
@@ -192,20 +193,19 @@ impl FileManager {
     fn compress_zip(&self, path: &str) -> Result<(), CompressFileError> {
         let zip_file_path = format!("./loggit_archives/{}.zip", path);
         let zip_file = std::fs::File::create(&zip_file_path)
-            .map_err(|_| CompressFileError::UnableToCreateZipFile)?;
+            .map_err(CompressFileError::UnableToCreateZipFile)?;
         let mut zip = ZipWriter::new(zip_file);
         let options = SimpleFileOptions::default().compression_method(CompressionMethod::DEFLATE);
 
         let file =
-            std::fs::File::open(path).map_err(|_| CompressFileError::UnableToOpenFileToCompress)?;
+            std::fs::File::open(path).map_err(CompressFileError::UnableToOpenFileToCompress)?;
         let mut reader = BufReader::new(file);
 
         zip.start_file(path, options)
-            .map_err(|_| CompressFileError::UnableToStartZipArchiving)?;
-        std::io::copy(&mut reader, &mut zip)
-            .map_err(|_| CompressFileError::UnableToCopyContents)?;
+            .map_err(CompressFileError::UnableToStartZipArchiving)?;
+        std::io::copy(&mut reader, &mut zip).map_err(CompressFileError::UnableToCopyContents)?;
         zip.finish()
-            .map_err(|_| CompressFileError::UnableToFinishArchivation)?;
+            .map_err(CompressFileError::UnableToFinishArchivation)?;
         Ok(())
 
         //println!("Files compressed successfully to {:?}", zip_file_path);
@@ -213,9 +213,8 @@ impl FileManager {
     /// Compresses a file by the given path depending on the set compression algortithm in the
     /// config
     pub(crate) fn compress_file(&self, path: &str) -> Result<(), CompressFileError> {
-        if FileManager::verify_arichive_dir().is_err() {
-            eprintln!("Couldn't compress file due to the error listed above!");
-            return Err(CompressFileError::InaccessibleArchivationDirectory);
+        if let Err(e) = FileManager::verify_arichive_dir() {
+            return Err(CompressFileError::InaccessibleArchivationDirectory(e));
         }
         if let Some(compr_t) = &self.file_constraints.compression {
             match compr_t {
@@ -234,19 +233,17 @@ impl FileManager {
         let curr_file_name = self.file_name.get_full_file_name();
         match std::fs::exists(&curr_file_name) {
             Err(e) => {
-                eprintln!("An error occured while trying to find a file: {}", e);
-                return Err(VerifyConstraintsError::UnableToVerifyFileExistence);
+                return Err(VerifyConstraintsError::UnableToVerifyFileExistence(e));
             }
             Ok(r) if !r => {
                 // file doesn't exist
                 match File::create(&curr_file_name) {
                     Ok(_) => {}
                     Err(e) => {
-                        eprintln!(
-                            "Couldn't create a file {} due to the next reason: {}",
-                            &curr_file_name, e
-                        );
-                        return Err(VerifyConstraintsError::UnableToCreateFile);
+                        return Err(VerifyConstraintsError::UnableToCreateFile(
+                            curr_file_name.clone(),
+                            e,
+                        ));
                     }
                 }
             }
@@ -254,21 +251,19 @@ impl FileManager {
         };
         let file = match std::fs::File::open(&curr_file_name) {
             Err(e) => {
-                eprintln!(
-                    "Couldn't open the file {} due to the next reason: {}",
-                    &curr_file_name, e
-                );
-                return Err(VerifyConstraintsError::UnableToOpenFile);
+                return Err(VerifyConstraintsError::UnableToOpenFile(
+                    curr_file_name.clone(),
+                    e,
+                ));
             }
             Ok(f) => f,
         };
         let f_size = match file.metadata() {
             Err(e) => {
-                eprintln!(
-                    "Couldn't get the file's {} metadata due to the next reason: {}",
-                    &curr_file_name, e
-                );
-                return Err(VerifyConstraintsError::UnableToGetFileMetadata);
+                return Err(VerifyConstraintsError::UnableToGetFileMetadata(
+                    curr_file_name.clone(),
+                    e,
+                ));
             }
             Ok(data) => data.size(),
         };
@@ -330,20 +325,15 @@ impl FileManager {
                             match self.create_new_file(config) {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    eprintln!(
-                                        "Couldn't create a new file due to the next reason: {}",
-                                        e
-                                    );
-                                    return Err(VerifyConstraintsError::UnableToCreateNewFile);
+                                    return Err(VerifyConstraintsError::UnableToCreateNewFile(e));
                                 }
                             }
                             if self.compress_file(&curr_file_name).is_ok() {
                                 if let Err(e) = FileManager::delete_file(&curr_file_name) {
-                                    eprintln!(
-                                        "Couldn't delete log file {} due to the next reason: {}",
-                                        &curr_file_name, e
-                                    );
-                                    res = Err(VerifyConstraintsError::UnableToDeleteOldLogFile);
+                                    res = Err(VerifyConstraintsError::UnableToDeleteOldLogFile(
+                                        curr_file_name.clone(),
+                                        e,
+                                    ));
                                 } else {
                                     res = Ok(VerifyConstraintsRes::NewFileCreated)
                                 }
@@ -362,20 +352,15 @@ impl FileManager {
                             match self.create_new_file(config) {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    eprintln!(
-                                        "Couldn't create a new file due to the next reason: {}",
-                                        e
-                                    );
-                                    return Err(VerifyConstraintsError::UnableToCreateNewFile);
+                                    return Err(VerifyConstraintsError::UnableToCreateNewFile(e));
                                 }
                             }
                             if self.compress_file(&curr_file_name).is_ok() {
                                 if let Err(e) = FileManager::delete_file(&curr_file_name) {
-                                    eprintln!(
-                                        "Couldn't delete log file {} due to the next reason: {}",
-                                        &curr_file_name, e
-                                    );
-                                    res = Err(VerifyConstraintsError::UnableToDeleteOldLogFile);
+                                    res = Err(VerifyConstraintsError::UnableToDeleteOldLogFile(
+                                        curr_file_name.clone(),
+                                        e,
+                                    ));
                                 } else {
                                     res = Ok(VerifyConstraintsRes::NewFileCreated)
                                 }
@@ -399,11 +384,7 @@ impl FileManager {
         let constrs = self.verify_constraints(&config);
         let f_name = self.get_file_name();
         if let Err(e) = helper::write_to_file(&f_name, &mess) {
-            eprintln!(
-                "Couldn't write to the file {} due to the next reason: {}",
-                &f_name, e
-            );
-            Err(WriteLogError::UnableToWriteToFile)
+            Err(WriteLogError::UnableToWriteToFile(e))
         } else {
             Ok(())
         }
