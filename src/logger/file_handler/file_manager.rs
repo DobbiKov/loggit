@@ -380,23 +380,25 @@ impl FileManager {
     pub(crate) fn delete_file(path: &str) -> io::Result<()> {
         std::fs::remove_file(path)
     }
+
     pub(crate) fn write_log(
         &mut self,
         mess: String,
         config: Config,
     ) -> Result<VerifyConstraintsRes, WriteLogError> {
-        let mut ok_res = VerifyConstraintsRes::ConstraintsPassed;
+        let mut ok_res = Ok(VerifyConstraintsRes::ConstraintsPassed);
         match self.verify_constraints(&config) {
-            Ok(r) => ok_res = r,
+            Ok(r) => ok_res = Ok(r),
             Err(e) => {
                 eprintln!("An error occured while verifying constraints: {}", e);
                 eprintln!("Trying to write to an old file");
+                ok_res = Err(e)
             }
         }
         let f_name = self.get_file_name();
 
         helper::write_to_file(&f_name, &mess)
-            .map(|_| ok_res)
+            .map(|_| ok_res.unwrap())
             .map_err(WriteLogError::UnableToWriteToFile)
     }
 }
