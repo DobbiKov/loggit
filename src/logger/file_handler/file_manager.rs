@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    file_formatter::FileFormatter,
+    file_formatter::{FileFormatter, FileFormatterTryFromStringError},
     file_name::{FileName, FileNameFromFileFormatterError},
 };
 
@@ -23,6 +23,14 @@ pub(crate) struct FileManager {
     file_format: FileFormatter,
     file_name: FileName,
     file_constraints: FileConstraints,
+}
+
+#[derive(Error, Debug)]
+pub(crate) enum FileManagerFromStringError {
+    #[error("string parsing for the file format error: {0}")]
+    FileFormatParsingError(FileFormatterTryFromStringError),
+    #[error("format parsing for the file name error: {0}")]
+    FileNameParsingError(FileNameFromFileFormatterError),
 }
 
 #[derive(Error, Debug)]
@@ -82,22 +90,23 @@ pub(crate) enum CreateNewFileError {
 }
 
 impl FileManager {
-    pub(crate) fn init_from_string(format: String, config: Config) -> Option<FileManager> {
+    pub(crate) fn init_from_string(
+        format: String,
+        config: Config,
+    ) -> Result<FileManager, FileManagerFromStringError> {
         let f_format = match FileFormatter::try_from_string(format) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("An error occured during parsing your format: {}", e);
-                return None;
+                return Err(FileManagerFromStringError::FileFormatParsingError(e));
             }
         };
         let f_name = match FileName::from_file_formatter(f_format.clone(), config.level) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("An error occured during parsing your format: {}", e);
-                return None;
+                return Err(FileManagerFromStringError::FileNameParsingError(e));
             }
         };
-        Some(FileManager {
+        Ok(FileManager {
             file_format: f_format,
             file_name: f_name,
             file_constraints: Default::default(),
