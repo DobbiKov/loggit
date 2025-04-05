@@ -94,9 +94,12 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 pub fn set_file(format: &str) {
     let format = format.to_string();
     let file_manager = match FileManager::init_from_string(format, get_config()) {
-        Some(r) => r,
-        None => {
-            eprintln!("Couldn't establish file config!");
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!(
+                "Couldn't establish file config due to the next reason: {}",
+                e
+            );
             return;
         }
     };
@@ -169,7 +172,7 @@ pub fn add_rotation(constraint: &str) {
     let mut f_manager = f_manager.unwrap();
 
     if !f_manager.add_rotation(constraint.to_string()) {
-        eprintln!("Incorrect value to the rotation!");
+        eprintln!("Incorrect value given for the rotation!");
         return;
     }
 
@@ -307,17 +310,6 @@ fn write_file_log(log_info: &LogInfo) {
             cfg.file_manager = Some(file_manager)
         }
     }
-    // TODO: here_ve_must_verify_the_time_and_others constraints
-    //match helper::write_to_file(&file_config.get_file_name(), &mess_to_print) {
-    //    Ok(()) => {}
-    //    Err(_) => {
-    //        println!(
-    //            "SOMETHING WENT WRONG WHILE TRYING TO WRITE TO A FILE! {} | {}",
-    //            file_config.get_file_name(),
-    //            mess_to_print
-    //        );
-    //    }
-    //}
 }
 fn log_handler(log_info: LogInfo) {
     if get_config().print_to_terminal {
