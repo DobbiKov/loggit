@@ -139,11 +139,8 @@ impl FileManager {
 
     pub(crate) fn create_new_file(&mut self, config: &Config) -> Result<(), CreateNewFileError> {
         loop {
-            match std::fs::exists(self.file_name.get_full_file_name()) {
-                Err(e) => {
-                    return Err(CreateNewFileError::UnableToVerifyFileExistence(e));
-                }
-                Ok(r) if !r => {
+            match std::path::Path::new(&self.file_name.get_full_file_name()).exists() {
+                false => {
                     let new_f_name =
                         match FileName::from_file_formatter(self.file_format.clone(), config.level)
                         {
@@ -161,7 +158,7 @@ impl FileManager {
                         }
                     }
                 }
-                _ => {
+                true => {
                     self.file_name.increase_num();
                 }
             }
@@ -174,18 +171,11 @@ impl FileManager {
     /// creates it
     pub(crate) fn verify_arichive_dir() -> Result<bool, std::io::Error> {
         let folder_path = &FileManager::get_path_to_compression_foler();
-        match std::fs::exists(folder_path) {
-            Err(e) => Err(e),
-            Ok(r) if r => Ok(true),
+        match std::path::Path::new(folder_path).exists() {
+            true => Ok(true),
             _ => match std::fs::create_dir(folder_path) {
                 Ok(_) => Ok(true),
-                Err(e) => {
-                    eprintln!(
-                        "Couldn't create an archives folder due to the next reason: {}",
-                        e
-                    );
-                    Err(e)
-                }
+                Err(e) => Err(e),
             },
         }
     }
@@ -231,23 +221,17 @@ impl FileManager {
         config: &Config,
     ) -> Result<VerifyConstraintsRes, VerifyConstraintsError> {
         let curr_file_name = self.file_name.get_full_file_name();
-        match std::fs::exists(&curr_file_name) {
-            Err(e) => {
-                return Err(VerifyConstraintsError::UnableToVerifyFileExistence(e));
-            }
-            Ok(r) if !r => {
-                // file doesn't exist
-                match File::create(&curr_file_name) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(VerifyConstraintsError::UnableToCreateFile(
-                            curr_file_name.clone(),
-                            e,
-                        ));
-                    }
+        if !std::path::Path::new(&curr_file_name).exists() {
+            // file doesn't exist
+            match File::create(&curr_file_name) {
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(VerifyConstraintsError::UnableToCreateFile(
+                        curr_file_name.clone(),
+                        e,
+                    ));
                 }
             }
-            _ => {}
         };
         let file = match std::fs::File::open(&curr_file_name) {
             Err(e) => {
