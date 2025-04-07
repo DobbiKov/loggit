@@ -17,6 +17,7 @@ use crate::{
 //pub(crate) mod formatter;
 pub mod file_handler;
 pub mod formatter;
+pub mod from_file_config;
 
 struct LogInfo {
     file: String,
