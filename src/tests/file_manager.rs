@@ -26,7 +26,7 @@ fn get_dummy_file_manager() -> FileManager {
     let fm_opt =
         FileManager::init_from_string("test_log_{date}_{time}.txt".to_string(), config.clone());
     assert!(
-        fm_opt.is_some(),
+        fm_opt.is_ok(),
         "FileManager initialization failed with a valid format"
     );
     fm_opt.unwrap()
@@ -37,7 +37,7 @@ fn test_init_from_string_valid() {
     let config = dummy_config();
     let fm = FileManager::init_from_string("log_{date}_{time}.txt".to_string(), config);
     assert!(
-        fm.is_some(),
+        fm.is_ok(),
         "Expected valid FileManager from a correct file format"
     );
 }
@@ -47,7 +47,7 @@ fn test_init_from_string_invalid() {
     let config = dummy_config();
     let fm = FileManager::init_from_string("log_{date}_{time}<.txt".to_string(), config);
     assert!(
-        fm.is_none(),
+        fm.is_err(),
         "Expected failure when using forbidden characters in the format"
     );
 }
