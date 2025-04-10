@@ -14,13 +14,13 @@ pub(crate) enum LogColor {
 impl From<String> for LogColor {
     fn from(value: String) -> Self {
         match value {
-            val if val == "red".to_string() => LogColor::Red,
-            val if val == "green".to_string() => LogColor::Green,
-            val if val == "blue".to_string() => LogColor::Blue,
-            val if val == "yellow".to_string() => LogColor::Yellow,
-            val if val == "black".to_string() => LogColor::Black,
-            val if val == "white".to_string() => LogColor::White,
-            val if val == "purple".to_string() => LogColor::Purple,
+            val if val == *"red" => LogColor::Red,
+            val if val == *"green" => LogColor::Green,
+            val if val == *"blue" => LogColor::Blue,
+            val if val == *"yellow" => LogColor::Yellow,
+            val if val == *"black" => LogColor::Black,
+            val if val == *"white" => LogColor::White,
+            val if val == *"purple" => LogColor::Purple,
             _ => {
                 eprintln!("Incorrect color given!");
                 LogColor::White

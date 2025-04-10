@@ -322,9 +322,9 @@ fn log_handler(log_info: LogInfo) {
 }
 
 // handles call from macro and passes deeper
-fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
+fn macro_handler(file: &str, line: u32, deb_str: String, level: Level) {
     let log_info = LogInfo {
-        file,
+        file: file.to_string(),
         line,
         message: deb_str,
         level,
@@ -338,7 +338,7 @@ fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
 ///
 /// It is used by the public logger macros to format and output the log message.
 pub fn __debug_handler(file: &str, line: u32, deb_str: String, level: Level) {
-    macro_handler(file.to_string(), line, deb_str, level);
+    macro_handler(file, line, deb_str, level);
 }
 
 // -- Publicly exported logging macros --

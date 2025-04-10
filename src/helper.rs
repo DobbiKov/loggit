@@ -87,7 +87,7 @@ pub(crate) enum WriteToFileError {
     #[error("unexpected error")]
     UnexpectedError(std::io::Error),
 }
-pub(crate) fn write_to_file(file_name: &String, text: &String) -> Result<(), WriteToFileError> {
+pub(crate) fn write_to_file(file_name: &str, text: &String) -> Result<(), WriteToFileError> {
     let mut file = match std::fs::OpenOptions::new()
         .append(true)
         .create(true)
