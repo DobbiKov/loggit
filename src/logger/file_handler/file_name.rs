@@ -30,7 +30,7 @@ impl FileName {
             .map(|x| x.to_string())
             .collect()
     }
-    fn is_acceptable_file_extension<'a>(ext: &'a str) -> bool {
+    fn is_acceptable_file_extension(ext: &str) -> bool {
         FileName::acceptable_file_extensions().contains(&ext.to_string())
     }
     pub(crate) fn increase_num(&mut self) {
@@ -106,15 +106,12 @@ impl FileName {
 impl From<FileName> for String {
     fn from(value: FileName) -> Self {
         let mut txt = value.file_name;
-        match value.file_num {
-            Some(num) => {
-                txt.push_str("(");
-                txt.push_str(&num.to_string());
-                txt.push_str("}");
-            }
-            None => {}
+        if let Some(num) = value.file_num {
+            txt.push('(');
+            txt.push_str(&num.to_string());
+            txt.push('}');
         };
-        txt.push_str(".");
+        txt.push('.');
         txt.push_str(&value.file_extension);
         txt
     }

@@ -91,7 +91,7 @@ pub(crate) enum CreateNewFileError {
 
 impl FileManager {
     pub(crate) fn init_from_string(
-        format: String,
+        format: &str,
         config: Config,
     ) -> Result<FileManager, FileManagerFromStringError> {
         let f_format = match FileFormatter::try_from_string(format) {
@@ -119,7 +119,7 @@ impl FileManager {
     pub(crate) fn remove_rotations(&mut self) {
         self.file_constraints.rotation = Vec::new();
     }
-    pub(crate) fn add_rotation(&mut self, string: String) -> bool {
+    pub(crate) fn add_rotation(&mut self, string: &str) -> bool {
         let rot_type = match RotationType::try_from_string(string) {
             Some(r) => r,
             None => {
@@ -130,7 +130,7 @@ impl FileManager {
         self.file_constraints.rotation.push(rot);
         true
     }
-    pub(crate) fn set_compression(&mut self, string: String) -> bool {
+    pub(crate) fn set_compression(&mut self, string: &str) -> bool {
         match CompressionType::try_from_string(string) {
             Some(r) => {
                 self.file_constraints.compression = Some(r);
@@ -376,7 +376,7 @@ impl FileManager {
 
     pub(crate) fn write_log(
         &mut self,
-        mess: String,
+        mess: &str,
         config: Config,
     ) -> Result<VerifyConstraintsRes, WriteLogError> {
         let mut ok_res = Ok(VerifyConstraintsRes::ConstraintsPassed);
@@ -390,7 +390,7 @@ impl FileManager {
         }
         let f_name = self.get_file_name();
 
-        helper::write_to_file(&f_name, &mess)
+        helper::write_to_file(&f_name, mess)
             .map(|_| ok_res.unwrap())
             .map_err(WriteLogError::UnableToWriteToFile)
     }
@@ -404,7 +404,7 @@ pub(crate) enum RotationType {
 }
 
 impl RotationType {
-    pub(crate) fn try_from_string(text: String) -> Option<RotationType> {
+    pub(crate) fn try_from_string(text: &str) -> Option<RotationType> {
         if text.contains(":") {
             // time
             let sp: Vec<&str> = text.split(":").collect();
@@ -552,8 +552,8 @@ pub(crate) enum CompressionType {
 }
 
 impl CompressionType {
-    pub(crate) fn try_from_string(text: String) -> Option<CompressionType> {
-        if text == *"zip" {
+    pub(crate) fn try_from_string(text: &str) -> Option<CompressionType> {
+        if text == "zip" {
             Some(CompressionType::Zip)
         } else {
             None

@@ -1,5 +1,4 @@
 use crate::logger::formatter::LogPart;
-use std::fmt::Display;
 
 use thiserror::Error;
 
@@ -22,16 +21,13 @@ pub(crate) enum FileFormatterTryFromStringError {
 
 impl FileFormatter {
     pub(crate) fn is_part_authorized(part: &LogPart) -> bool {
-        match part {
-            LogPart::Message | LogPart::File | LogPart::Line => false,
-            _ => true,
-        }
+        !matches!(part, LogPart::Message | LogPart::File | LogPart::Line)
     }
     fn forbidden_caracters() -> [char; 4] {
         ['<', '>', '&', '%']
     }
     pub(crate) fn try_from_string(
-        format: String,
+        format: &str,
     ) -> Result<FileFormatter, FileFormatterTryFromStringError> {
         for ch in FileFormatter::forbidden_caracters() {
             if format.contains(ch) {
@@ -54,7 +50,7 @@ impl FileFormatter {
             return Err(FileFormatterTryFromStringError::NoFileExtensionProvided);
         }
         for elem in &elems {
-            if !FileFormatter::is_part_authorized(&elem) {
+            if !FileFormatter::is_part_authorized(elem) {
                 return Err(FileFormatterTryFromStringError::IncorrectFormatPartGiven);
             }
         }

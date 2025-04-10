@@ -52,10 +52,7 @@
 
 use logger::{file_handler::file_manager::FileManager, formatter::LogFormatter};
 use once_cell::sync::Lazy;
-use std::{
-    fmt::Display,
-    sync::{Arc, RwLock},
-};
+use std::{fmt::Display, sync::RwLock};
 pub(crate) mod helper;
 
 #[cfg(test)]
@@ -70,12 +67,6 @@ pub enum Level {
     INFO,
     WARN,
     ERROR,
-}
-
-#[derive(Clone)]
-struct FileConfig {
-    file_format: FileManager, // if nothing is written to the file, None
-    current_file_name: String,
 }
 
 #[derive(Clone)]
@@ -102,7 +93,7 @@ impl Default for Config {
             info_log_format: Default::default(),
             warn_log_format: Default::default(),
             error_log_format: LogFormatter::parse_from_string(
-                "<red>[{level}]<red> <blue>({file} {line})<blue> - <red>{message}<red>".to_string(),
+                "<red>[{level}]<red> <blue>({file} {line})<blue> - <red>{message}<red>",
             ),
             file_manager: None,
         }

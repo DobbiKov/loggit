@@ -5,13 +5,12 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
-use crate::logger::file_handler::file_formatter::FileFormatter;
-use file_handler::file_manager::{self, FileManager};
+use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
 use std::sync::RwLockWriteGuard;
 
 use crate::{
-    helper::{self, get_current_date_in_string, get_current_time_in_string},
+    helper::{get_current_date_in_string, get_current_time_in_string},
     Config, Level, CONFIG,
 };
 //pub(crate) mod formatter;
@@ -93,7 +92,6 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 ///    - `"app_{date}_{time}.txt"`  
 ///    - `"{level}-log-on-{date}.log"`
 pub fn set_file(format: &str) {
-    let format = format.to_string();
     let file_manager = match FileManager::init_from_string(format, get_config()) {
         Ok(r) => r,
         Err(e) => {
@@ -131,7 +129,7 @@ pub fn set_compression(ctype: &str) {
         return;
     }
     let mut f_manager = f_manager.unwrap();
-    f_manager.set_compression(ctype.to_string());
+    f_manager.set_compression(ctype);
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -172,7 +170,7 @@ pub fn add_rotation(constraint: &str) {
     }
     let mut f_manager = f_manager.unwrap();
 
-    if !f_manager.add_rotation(constraint.to_string()) {
+    if !f_manager.add_rotation(constraint) {
         eprintln!("Incorrect value given for the rotation!");
         return;
     }
@@ -242,7 +240,6 @@ pub fn set_global_formatting(format: &str) {
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
 pub fn set_level_formatting(level: Level, format: &str) {
-    let format = format.to_string();
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
@@ -251,11 +248,11 @@ pub fn set_level_formatting(level: Level, format: &str) {
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         match level {
-            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format.clone()),
+            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format),
+            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format),
+            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format),
+            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format),
+            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format),
         }
     }
 }
@@ -292,7 +289,7 @@ fn write_file_log(log_info: &LogInfo) {
     let mut file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
-    let res = file_manager.write_log(mess_to_print, get_config());
+    let res = file_manager.write_log(&mess_to_print, get_config());
     match res {
         Ok(_) => {}
         Err(e) => {

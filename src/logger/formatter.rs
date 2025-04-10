@@ -49,7 +49,7 @@ impl LogColor {
         .to_string()
     }
 
-    pub(crate) fn colorize_str(text: &String, color: LogColor) -> String {
+    pub(crate) fn colorize_str(text: &str, color: LogColor) -> String {
         format!("{}{}{}", color.get_ascii(), text, "\x1b[0m")
     }
 }
@@ -79,12 +79,12 @@ impl LogPart {
 impl From<String> for LogPart {
     fn from(value: String) -> Self {
         match value {
-            val if val == "message".to_string() => LogPart::Message,
-            val if val == "time".to_string() => LogPart::Time,
-            val if val == "date".to_string() => LogPart::Date,
-            val if val == "file".to_string() => LogPart::File,
-            val if val == "line".to_string() => LogPart::Line,
-            val if val == "level".to_string() => LogPart::Level,
+            val if val == *"message" => LogPart::Message,
+            val if val == *"time" => LogPart::Time,
+            val if val == *"date" => LogPart::Date,
+            val if val == *"file" => LogPart::File,
+            val if val == *"line" => LogPart::Line,
+            val if val == *"level" => LogPart::Level,
             _ => {
                 eprintln!("Incorrect part given!");
                 LogPart::Text(String::new())
@@ -105,7 +105,7 @@ pub(crate) struct LogFormatter {
 }
 
 impl LogFormatter {
-    pub(crate) fn parse_from_string(text: String) -> Self {
+    pub(crate) fn parse_from_string(text: &str) -> Self {
         let wrappers = parse_string_to_wrappers(text);
         LogFormatter { parts: wrappers }
     }
@@ -113,13 +113,13 @@ impl LogFormatter {
 impl Default for LogFormatter {
     fn default() -> Self {
         LogFormatter::parse_from_string(
-            "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}".to_string(),
+            "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}",
         )
     }
 }
 
 /// Parse string to log_wrappers i.e Vec of log_part and assigned color to it
-pub(crate) fn parse_string_to_wrappers(text: String) -> Vec<LogFormatWrapper> {
+pub(crate) fn parse_string_to_wrappers(text: &str) -> Vec<LogFormatWrapper> {
     let symbols_struct = string_parse(text, "".to_string(), ParseSymbs::Start);
     let symbols = parse_symbs_to_vec(symbols_struct);
     let parts = parse_vec_of_parse_symb_to_parts(symbols).expect("Given string is incorrect!");
@@ -127,7 +127,7 @@ pub(crate) fn parse_string_to_wrappers(text: String) -> Vec<LogFormatWrapper> {
 }
 
 /// Parse string to log_parts
-pub(crate) fn parse_string_to_logparts(text: String) -> Vec<LogPart> {
+pub(crate) fn parse_string_to_logparts(text: &str) -> Vec<LogPart> {
     let wrappers = parse_string_to_wrappers(text);
     wrappers.into_iter().map(|x| x.part).collect()
 }
@@ -299,7 +299,7 @@ fn parse_symbs_to_vec(symbs: ParseSymbs) -> Vec<ParseSymbs> {
     res
 }
 
-fn string_parse(string: String, acc_text: String, acc1: ParseSymbs) -> ParseSymbs {
+fn string_parse(string: &str, acc_text: String, acc1: ParseSymbs) -> ParseSymbs {
     if string.is_empty() {
         if !acc_text.is_empty() {
             ParseSymbs::AndNext(Box::new(acc1), Box::new(ParseSymbs::Text(acc_text)))
@@ -317,28 +317,28 @@ fn string_parse(string: String, acc_text: String, acc1: ParseSymbs) -> ParseSymb
         }
         match curr_char {
             '{' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::BracketOpen)),
             ),
             '}' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::BracketClose)),
             ),
             '<' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::AngleOpen)),
             ),
             '>' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::AngleClose)),
             ),
             el => {
                 str_to_ret.push(el);
-                string_parse(string[1..].to_string(), str_to_ret, acc_to_ret)
+                string_parse(&string[1..], str_to_ret, acc_to_ret)
             }
         }
     }

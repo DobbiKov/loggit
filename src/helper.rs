@@ -1,5 +1,5 @@
 use chrono::{self, Datelike, Timelike};
-use std::{fmt::Display, io::Write};
+use std::io::Write;
 use thiserror::Error;
 
 pub(crate) fn get_current_time_in_utc() -> (u32, u32, i32, u32, u32, u32) {
@@ -45,7 +45,7 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
     let minute = seconds / SECONDS_IN_MINUTE;
     let second = seconds % SECONDS_IN_MINUTE;
 
-    let mut is_leap = |y: u64| -> bool { (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0) };
+    let is_leap = |y: u64| -> bool { (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0) };
 
     let days_in_month = |y: u64, m: u64| -> u64 {
         match m {
@@ -87,7 +87,7 @@ pub(crate) enum WriteToFileError {
     #[error("unexpected error")]
     UnexpectedError(std::io::Error),
 }
-pub(crate) fn write_to_file(file_name: &str, text: &String) -> Result<(), WriteToFileError> {
+pub(crate) fn write_to_file(file_name: &str, text: &str) -> Result<(), WriteToFileError> {
     let mut file = match std::fs::OpenOptions::new()
         .append(true)
         .create(true)
