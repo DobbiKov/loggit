@@ -1,5 +1,8 @@
 # Release notes 
 
+## Version 0.1.3
+- String optimization has been done across all the library
+
 ## Version 0.1.2
 - Fixed an error with std::fs::exists
 
