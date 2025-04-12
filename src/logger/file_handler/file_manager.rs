@@ -26,7 +26,7 @@ pub(crate) struct FileManager {
 }
 
 #[derive(Error, Debug)]
-pub(crate) enum FileManagerFromStringError {
+pub enum FileManagerFromStringError {
     #[error("string parsing for the file format error: {0}")]
     FileFormatParsingError(FileFormatterTryFromStringError),
     #[error("format parsing for the file name error: {0}")]

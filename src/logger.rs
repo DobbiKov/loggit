@@ -7,6 +7,10 @@
 
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
+use set_errors::{
+    AddRotationError, SetColorizedError, SetCompressionError, SetFileError,
+    SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
+};
 use std::sync::RwLockWriteGuard;
 
 use crate::{
@@ -17,6 +21,7 @@ use crate::{
 pub mod file_handler;
 pub mod formatter;
 pub mod from_file_config;
+pub mod set_errors;
 
 struct LogInfo {
     file: String,
@@ -91,27 +96,23 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 ///  - *Examples:*  
 ///    - `"app_{date}_{time}.txt"`  
 ///    - `"{level}-log-on-{date}.log"`
-pub fn set_file(format: &str) {
+pub fn set_file(format: &str) -> Result<(), SetFileError> {
     let file_manager = match FileManager::init_from_string(format, get_config()) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!(
-                "Couldn't establish file config due to the next reason: {}",
-                e
-            );
-            return;
+            return Err(SetFileError::UnableToLoadFromString(e));
         }
     };
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
-        eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetFileError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(file_manager);
     }
+    Ok(())
 }
 
 ///Enables file compression for log archival.
@@ -122,11 +123,10 @@ pub fn set_file(format: &str) {
 ///- **Allowed values:**  
 ///  - Accepts only a single allowed value: `"zip"`.  
 ///  - Any other string will output an error and leave the compression configuration unchanged.
-pub fn set_compression(ctype: &str) {
+pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
-        eprintln!("Can't set a compression when the file isn't set!");
-        return;
+        return Err(SetCompressionError::FileIsntSet);
     }
     let mut f_manager = f_manager.unwrap();
     f_manager.set_compression(ctype);
@@ -134,12 +134,13 @@ pub fn set_compression(ctype: &str) {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetCompressionError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(f_manager);
     }
+    Ok(())
 }
 
 ///Adds a new constraint for rotating log files.
@@ -162,88 +163,93 @@ pub fn set_compression(ctype: &str) {
 ///      - Note the space before the unit.
 ///
 ///- If an incorrect value is provided, the rotation is not added and an error message is logged.
-pub fn add_rotation(constraint: &str) {
+pub fn add_rotation(constraint: &str) -> Result<(), AddRotationError> {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
-        eprintln!("Can't set a compression when the file isn't set!");
-        return;
+        eprintln!("Can't add a rotation when the file isn't set!");
+        return Err(AddRotationError::FileIsntSet);
     }
     let mut f_manager = f_manager.unwrap();
 
     if !f_manager.add_rotation(constraint) {
         eprintln!("Incorrect value given for the rotation!");
-        return;
+        return Err(AddRotationError::IncorrectFormatGiven);
     }
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(AddRotationError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(f_manager);
     }
+    Ok(())
 }
 
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.
-pub fn set_log_level(lvl: Level) {
+pub fn set_log_level(lvl: Level) -> Result<(), SetLogLevelError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetLogLevelError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.level = lvl;
     }
+    Ok(())
 }
 /// Enables or disables terminal output of log messages.
 /// When set to false, log messages will not be printed to the terminal.
-pub fn set_print_to_terminal(val: bool) {
+pub fn set_print_to_terminal(val: bool) -> Result<(), SetPrintToTerminalError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetPrintToTerminalError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.print_to_terminal = val;
     }
+    Ok(())
 }
 /// Enables or disables colorized output of log messages.
 /// If enabled, logs will be printed with colors as configured in the format.
-pub fn set_colorized(val: bool) {
+pub fn set_colorized(val: bool) -> Result<(), SetColorizedError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetColorizedError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.colorized = val;
     }
+    Ok(())
 }
 
 /// Sets a global log formatting string for all log levels.
 /// This function updates the formatting of each level to the given template.
-pub fn set_global_formatting(format: &str) {
-    set_level_formatting(Level::TRACE, format);
-    set_level_formatting(Level::DEBUG, format);
-    set_level_formatting(Level::INFO, format);
-    set_level_formatting(Level::WARN, format);
-    set_level_formatting(Level::ERROR, format);
+pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError> {
+    set_level_formatting(Level::TRACE, format)?;
+    set_level_formatting(Level::DEBUG, format)?;
+    set_level_formatting(Level::INFO, format)?;
+    set_level_formatting(Level::WARN, format)?;
+    set_level_formatting(Level::ERROR, format)?;
+    Ok(())
 }
 
 /// Sets a custom log formatting string for the specified log level.
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
-pub fn set_level_formatting(level: Level, format: &str) {
+pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetLevelFormattingError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
@@ -255,6 +261,7 @@ pub fn set_level_formatting(level: Level, format: &str) {
             Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format),
         }
     }
+    Ok(())
 }
 
 // -- Internal functions for logging --
