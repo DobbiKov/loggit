@@ -98,7 +98,7 @@ fn test_seconds_to_ymdhms_epoch() {
 #[test]
 fn test_parse_string_to_logparts() {
     let format_str = "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}";
-    let parts = parse_string_to_logparts(format_str);
+    let parts = parse_string_to_logparts(format_str).unwrap();
     // The returned vector should not be empty
     assert!(!parts.is_empty());
     // Expect at least one part corresponding to text (e.g., "[")

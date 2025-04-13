@@ -1,6 +1,8 @@
 use thiserror::Error;
 
-use super::file_handler::file_manager::FileManagerFromStringError;
+use super::{
+    file_handler::file_manager::FileManagerFromStringError, formatter::ParseStringToWrappersError,
+};
 
 #[derive(Error, Debug)]
 pub enum SetFileError {
@@ -50,5 +52,11 @@ pub enum SetLevelFormattingError {
     #[error("unable to load config")]
     UnableToLoadConfig,
     #[error("incorrect formatting")] // TODO!
-    IncorrectFormatGiven,
+    IncorrectFormatGiven(ParseStringToWrappersError),
+}
+
+impl From<ParseStringToWrappersError> for SetLevelFormattingError {
+    fn from(value: ParseStringToWrappersError) -> Self {
+        SetLevelFormattingError::IncorrectFormatGiven(value)
+    }
 }

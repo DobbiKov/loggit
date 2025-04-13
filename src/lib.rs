@@ -94,7 +94,8 @@ impl Default for Config {
             warn_log_format: Default::default(),
             error_log_format: LogFormatter::parse_from_string(
                 "<red>[{level}]<red> <blue>({file} {line})<blue> - <red>{message}<red>",
-            ),
+            )
+            .unwrap(),
             file_manager: None,
         }
     }

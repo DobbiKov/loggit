@@ -105,9 +105,9 @@ pub(crate) struct LogFormatter {
 }
 
 impl LogFormatter {
-    pub(crate) fn parse_from_string(text: &str) -> Self {
-        let wrappers = parse_string_to_wrappers(text);
-        LogFormatter { parts: wrappers }
+    pub(crate) fn parse_from_string(text: &str) -> Result<Self, ParseStringToWrappersError> {
+        let wrappers = parse_string_to_wrappers(text)?;
+        Ok(LogFormatter { parts: wrappers })
     }
 }
 impl Default for LogFormatter {
@@ -115,21 +115,40 @@ impl Default for LogFormatter {
         LogFormatter::parse_from_string(
             "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}",
         )
+        .unwrap()
     }
 }
 
+#[derive(Debug, Error)]
+pub enum ParseStringToWrappersError {
+    #[error("couldn't parse symbols to the parts: {0}")]
+    UnableToParseSymbolsToParts(ParseSymbToPartsError),
+    #[error("couldn't parse parts to the formatter: {0}")]
+    UnableToParsePartsToFormatter(ParsePartsToFormatterError),
+}
+
 /// Parse string to log_wrappers i.e Vec of log_part and assigned color to it
-pub(crate) fn parse_string_to_wrappers(text: &str) -> Vec<LogFormatWrapper> {
+pub(crate) fn parse_string_to_wrappers(
+    text: &str,
+) -> Result<Vec<LogFormatWrapper>, ParseStringToWrappersError> {
     let symbols_struct = string_parse(text, "".to_string(), ParseSymbs::Start);
     let symbols = parse_symbs_to_vec(symbols_struct);
-    let parts = parse_vec_of_parse_symb_to_parts(symbols).expect("Given string is incorrect!");
-    parse_parts_to_formatter(parts).expect("Given string is incorrect!")
+    let parts = match parse_vec_of_parse_symb_to_parts(symbols) {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(ParseStringToWrappersError::UnableToParseSymbolsToParts(e));
+        }
+    };
+    parse_parts_to_formatter(parts)
+        .map_err(ParseStringToWrappersError::UnableToParsePartsToFormatter)
 }
 
 /// Parse string to log_parts
-pub(crate) fn parse_string_to_logparts(text: &str) -> Vec<LogPart> {
-    let wrappers = parse_string_to_wrappers(text);
-    wrappers.into_iter().map(|x| x.part).collect()
+pub(crate) fn parse_string_to_logparts(
+    text: &str,
+) -> Result<Vec<LogPart>, ParseStringToWrappersError> {
+    let wrappers = parse_string_to_wrappers(text)?;
+    Ok(wrappers.into_iter().map(|x| x.part).collect())
 }
 
 // ******
@@ -171,7 +190,7 @@ impl ParseParts {
 }
 
 #[derive(Debug, Error)]
-enum ParsePartsToFormatterError {
+pub enum ParsePartsToFormatterError {
     #[error("unexpected error")]
     UnexpectedError,
     #[error("incorrect data given")]

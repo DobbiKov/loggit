@@ -254,11 +254,11 @@ pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFo
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         match level {
-            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format),
-            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format),
-            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format),
-            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format),
-            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format),
+            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format)?,
+            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format)?,
+            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format)?,
+            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format)?,
+            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format)?,
         }
     }
     Ok(())
