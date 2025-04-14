@@ -63,12 +63,13 @@ pub(crate) enum LogPart {
     Date,
     Level,
     Text(String),
+    ModulePath,
 }
 
 impl LogPart {
     fn get_parts_str() -> Vec<String> {
         vec![
-            "message", "time", "date", "file", "line", "date", "level", "text",
+            "message", "time", "date", "file", "line", "date", "level", "text", "module",
         ]
         .into_iter()
         .map(|x| x.to_string())
@@ -85,6 +86,7 @@ impl From<String> for LogPart {
             val if val == *"file" => LogPart::File,
             val if val == *"line" => LogPart::Line,
             val if val == *"level" => LogPart::Level,
+            val if val == *"module" => LogPart::ModulePath,
             _ => {
                 eprintln!("Incorrect part given!");
                 LogPart::Text(String::new())

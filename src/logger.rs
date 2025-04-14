@@ -24,6 +24,7 @@ pub mod from_file_config;
 pub mod set_errors;
 
 struct LogInfo {
+    module_path: String,
     file: String,
     line: u32,
     message: String,
@@ -278,6 +279,7 @@ fn string_log(log_info: &LogInfo, colorize: bool) -> String {
             formatter::LogPart::Date => &curr_date,
             formatter::LogPart::Level => &log_info.level.to_string(),
             formatter::LogPart::Text(text) => &text.clone(),
+            formatter::LogPart::ModulePath => &log_info.module_path,
         };
         if colorize && log_part.color.is_some() {
             let colored_str = LogColor::colorize_str(str_to_push, log_part.color.unwrap());
@@ -326,8 +328,9 @@ fn log_handler(log_info: LogInfo) {
 }
 
 // handles call from macro and passes deeper
-fn macro_handler(file: &str, line: u32, deb_str: String, level: Level) {
+fn macro_handler(module_path: &str, file: &str, line: u32, deb_str: String, level: Level) {
     let log_info = LogInfo {
+        module_path: module_path.to_string(),
         file: file.to_string(),
         line,
         message: deb_str,
@@ -341,8 +344,8 @@ fn macro_handler(file: &str, line: u32, deb_str: String, level: Level) {
 /// Internal function for handling log macros.
 ///
 /// It is used by the public logger macros to format and output the log message.
-pub fn __debug_handler(file: &str, line: u32, deb_str: String, level: Level) {
-    macro_handler(file, line, deb_str, level);
+pub fn __debug_handler(module_path: &str, file: &str, line: u32, deb_str: String, level: Level) {
+    macro_handler(module_path, file, line, deb_str, level);
 }
 
 // -- Publicly exported logging macros --
@@ -360,7 +363,7 @@ pub fn __debug_handler(file: &str, line: u32, deb_str: String, level: Level) {
 macro_rules! trace {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::TRACE);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::TRACE);
         }};
     }
 
@@ -377,7 +380,7 @@ macro_rules! trace {
 macro_rules! debug {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::DEBUG);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::DEBUG);
         }};
     }
 
@@ -394,7 +397,7 @@ macro_rules! debug {
 macro_rules! info {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::INFO);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::INFO);
         }};
     }
 
@@ -411,7 +414,7 @@ macro_rules! info {
 macro_rules! warn {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::WARN);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::WARN);
         }};
     }
 
@@ -428,7 +431,7 @@ macro_rules! warn {
 macro_rules! error {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::ERROR);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::ERROR);
         }};
     }
 
