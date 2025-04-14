@@ -73,7 +73,7 @@ use loggit::logger::set_global_formatting;
 
 fn main() {
     // Set a global custom log format using color tags.
-    set_global_formatting("<green>[{level}]<green> ({file}:{line}) - {message}".to_string());
+    set_global_formatting("<green>[{level}]<green> ({file}:{line}) - {message}");
 
     info!("This info message follows the new global format.");
     info!("The error message as well.");
@@ -90,7 +90,7 @@ fn main() {
     // Customize the ERROR log format specifically.
     set_level_formatting(
         Level::ERROR,
-        "<red>[{level}]<red> <blue>({file}:{line})<blue> - <red>{message}<red>".to_string()
+        "<red>[{level}]<red> <blue>({file}:{line})<blue> - <red>{message}<red>"
     );
 
     error!("This error message will follow the custom error format.");
