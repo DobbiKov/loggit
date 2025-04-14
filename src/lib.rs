@@ -20,7 +20,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! loggit = "0.1.1"
+//! loggit = "0.1.4"
 //! ```
 //!
 //! Or use:

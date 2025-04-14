@@ -245,7 +245,16 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 
 /// Sets a custom log formatting string for the specified log level.
 ///
-/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
+/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `module` and `{message}`.
+///
+/// Example:
+/// ```rust
+/// use loggit::logger;
+///
+/// fn main(){
+///     logger.set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
+/// }
+/// ```
 pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {

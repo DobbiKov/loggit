@@ -1,5 +1,9 @@
 # Release notes 
 
+## Version 0.1.4
+- Improved error handling for setters
+- Added module as an option to the log messages parts
+
 ## Version 0.1.3
 - String optimization has been done across all the library
 

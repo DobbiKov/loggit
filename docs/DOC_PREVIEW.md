@@ -116,11 +116,21 @@ Sets the log format globally for all log levels.
   Updates the formatter for every log level (TRACE, DEBUG, INFO, WARN, ERROR) to use the provided format string.
 
 - **Allowed values:**  
-  - Any valid formatting string that may include placeholders such as `{level}`, `{file}`, `{line}`, and `{message}`.  
+  - Any valid formatting string that may include placeholders such as `{level}`, `{file}`, `{line}`, `module` and `{message}`.  
   - You may also use color tags (e.g. `<red>`) which are interpreted by the formatter.
   
   *Example:*  
   - `"<green>[{level}]<green> ({file}:{line}) - {message}"`
+
+  *Example:*
+
+ ```rust
+ use loggit::logger;
+
+ fn main(){
+     logger.set_global_formatting("{module} <red>{level}<red> [{file}] {message}");
+ }
+ ```
 
 ---
 
