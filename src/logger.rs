@@ -250,9 +250,10 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 /// Example:
 /// ```rust
 /// use loggit::logger;
+/// use loggit::Level;
 ///
 /// fn main(){
-///     logger.set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
+///     logger::set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
 /// }
 /// ```
 pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
