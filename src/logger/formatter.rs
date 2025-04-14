@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum LogColor {
     Red,
@@ -12,13 +14,13 @@ pub(crate) enum LogColor {
 impl From<String> for LogColor {
     fn from(value: String) -> Self {
         match value {
-            val if val == "red".to_string() => LogColor::Red,
-            val if val == "green".to_string() => LogColor::Green,
-            val if val == "blue".to_string() => LogColor::Blue,
-            val if val == "yellow".to_string() => LogColor::Yellow,
-            val if val == "black".to_string() => LogColor::Black,
-            val if val == "white".to_string() => LogColor::White,
-            val if val == "purple".to_string() => LogColor::Purple,
+            val if val == *"red" => LogColor::Red,
+            val if val == *"green" => LogColor::Green,
+            val if val == *"blue" => LogColor::Blue,
+            val if val == *"yellow" => LogColor::Yellow,
+            val if val == *"black" => LogColor::Black,
+            val if val == *"white" => LogColor::White,
+            val if val == *"purple" => LogColor::Purple,
             _ => {
                 eprintln!("Incorrect color given!");
                 LogColor::White
@@ -47,7 +49,7 @@ impl LogColor {
         .to_string()
     }
 
-    pub(crate) fn colorize_str(text: &String, color: LogColor) -> String {
+    pub(crate) fn colorize_str(text: &str, color: LogColor) -> String {
         format!("{}{}{}", color.get_ascii(), text, "\x1b[0m")
     }
 }
@@ -61,12 +63,13 @@ pub(crate) enum LogPart {
     Date,
     Level,
     Text(String),
+    ModulePath,
 }
 
 impl LogPart {
     fn get_parts_str() -> Vec<String> {
         vec![
-            "message", "time", "date", "file", "line", "date", "level", "text",
+            "message", "time", "date", "file", "line", "date", "level", "text", "module",
         ]
         .into_iter()
         .map(|x| x.to_string())
@@ -77,12 +80,13 @@ impl LogPart {
 impl From<String> for LogPart {
     fn from(value: String) -> Self {
         match value {
-            val if val == "message".to_string() => LogPart::Message,
-            val if val == "time".to_string() => LogPart::Time,
-            val if val == "date".to_string() => LogPart::Date,
-            val if val == "file".to_string() => LogPart::File,
-            val if val == "line".to_string() => LogPart::Line,
-            val if val == "level".to_string() => LogPart::Level,
+            val if val == *"message" => LogPart::Message,
+            val if val == *"time" => LogPart::Time,
+            val if val == *"date" => LogPart::Date,
+            val if val == *"file" => LogPart::File,
+            val if val == *"line" => LogPart::Line,
+            val if val == *"level" => LogPart::Level,
+            val if val == *"module" => LogPart::ModulePath,
             _ => {
                 eprintln!("Incorrect part given!");
                 LogPart::Text(String::new())
@@ -103,31 +107,50 @@ pub(crate) struct LogFormatter {
 }
 
 impl LogFormatter {
-    pub(crate) fn parse_from_string(text: String) -> Self {
-        let wrappers = parse_string_to_wrappers(text);
-        LogFormatter { parts: wrappers }
+    pub(crate) fn parse_from_string(text: &str) -> Result<Self, ParseStringToWrappersError> {
+        let wrappers = parse_string_to_wrappers(text)?;
+        Ok(LogFormatter { parts: wrappers })
     }
 }
 impl Default for LogFormatter {
     fn default() -> Self {
         LogFormatter::parse_from_string(
-            "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}".to_string(),
+            "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}",
         )
+        .unwrap()
     }
 }
 
+#[derive(Debug, Error)]
+pub enum ParseStringToWrappersError {
+    #[error("couldn't parse symbols to the parts: {0}")]
+    UnableToParseSymbolsToParts(ParseSymbToPartsError),
+    #[error("couldn't parse parts to the formatter: {0}")]
+    UnableToParsePartsToFormatter(ParsePartsToFormatterError),
+}
+
 /// Parse string to log_wrappers i.e Vec of log_part and assigned color to it
-pub(crate) fn parse_string_to_wrappers(text: String) -> Vec<LogFormatWrapper> {
+pub(crate) fn parse_string_to_wrappers(
+    text: &str,
+) -> Result<Vec<LogFormatWrapper>, ParseStringToWrappersError> {
     let symbols_struct = string_parse(text, "".to_string(), ParseSymbs::Start);
     let symbols = parse_symbs_to_vec(symbols_struct);
-    let parts = parse_vec_of_parse_symb_to_parts(symbols).expect("Given string is incorrect!");
-    parse_parts_to_formatter(parts).expect("Given string is incorrect!")
+    let parts = match parse_vec_of_parse_symb_to_parts(symbols) {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(ParseStringToWrappersError::UnableToParseSymbolsToParts(e));
+        }
+    };
+    parse_parts_to_formatter(parts)
+        .map_err(ParseStringToWrappersError::UnableToParsePartsToFormatter)
 }
 
 /// Parse string to log_parts
-pub(crate) fn parse_string_to_logparts(text: String) -> Vec<LogPart> {
-    let wrappers = parse_string_to_wrappers(text);
-    wrappers.into_iter().map(|x| x.part).collect()
+pub(crate) fn parse_string_to_logparts(
+    text: &str,
+) -> Result<Vec<LogPart>, ParseStringToWrappersError> {
+    let wrappers = parse_string_to_wrappers(text)?;
+    Ok(wrappers.into_iter().map(|x| x.part).collect())
 }
 
 // ******
@@ -168,9 +191,11 @@ impl ParseParts {
     }
 }
 
-#[derive(Debug)]
-enum ParsePartsToFormatterError {
+#[derive(Debug, Error)]
+pub enum ParsePartsToFormatterError {
+    #[error("unexpected error")]
     UnexpectedError,
+    #[error("incorrect data given")]
     IncorrectDataGiven,
 }
 
@@ -222,9 +247,11 @@ fn parse_parts_to_formatter(
     Ok(res)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ParseSymbToPartsError {
+    #[error("incorrect data given")]
     IncorrectDataGiven,
+    #[error("unexpected error")]
     UnexpectedError,
 }
 
@@ -293,7 +320,7 @@ fn parse_symbs_to_vec(symbs: ParseSymbs) -> Vec<ParseSymbs> {
     res
 }
 
-fn string_parse(string: String, acc_text: String, acc1: ParseSymbs) -> ParseSymbs {
+fn string_parse(string: &str, acc_text: String, acc1: ParseSymbs) -> ParseSymbs {
     if string.is_empty() {
         if !acc_text.is_empty() {
             ParseSymbs::AndNext(Box::new(acc1), Box::new(ParseSymbs::Text(acc_text)))
@@ -311,28 +338,28 @@ fn string_parse(string: String, acc_text: String, acc1: ParseSymbs) -> ParseSymb
         }
         match curr_char {
             '{' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::BracketOpen)),
             ),
             '}' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::BracketClose)),
             ),
             '<' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::AngleOpen)),
             ),
             '>' => string_parse(
-                string[1..].to_string(),
+                &string[1..],
                 str_to_ret,
                 ParseSymbs::AndNext(Box::new(acc_to_ret), Box::new(ParseSymbs::AngleClose)),
             ),
             el => {
                 str_to_ret.push(el);
-                string_parse(string[1..].to_string(), str_to_ret, acc_to_ret)
+                string_parse(&string[1..], str_to_ret, acc_to_ret)
             }
         }
     }

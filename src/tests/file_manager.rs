@@ -1,9 +1,4 @@
-use crate::logger::file_handler::file_formatter::FileFormatter;
-use crate::logger::file_handler::file_manager::{
-    CompressFileError, CreateNewFileError, FileManager, RotationType, VerifyConstraintsRes,
-    WriteLogError,
-};
-use crate::logger::file_handler::file_name::FileName;
+use crate::logger::file_handler::file_manager::{CompressFileError, FileManager};
 use crate::Config;
 use crate::Level;
 use std::fs;
@@ -23,10 +18,9 @@ fn dummy_config() -> Config {
 /// Panics if initialization fails.
 fn get_dummy_file_manager() -> FileManager {
     let config = dummy_config();
-    let fm_opt =
-        FileManager::init_from_string("test_log_{date}_{time}.txt".to_string(), config.clone());
+    let fm_opt = FileManager::init_from_string("test_log_{date}_{time}.txt", config.clone());
     assert!(
-        fm_opt.is_some(),
+        fm_opt.is_ok(),
         "FileManager initialization failed with a valid format"
     );
     fm_opt.unwrap()
@@ -35,9 +29,9 @@ fn get_dummy_file_manager() -> FileManager {
 #[test]
 fn test_init_from_string_valid() {
     let config = dummy_config();
-    let fm = FileManager::init_from_string("log_{date}_{time}.txt".to_string(), config);
+    let fm = FileManager::init_from_string("log_{date}_{time}.txt", config);
     assert!(
-        fm.is_some(),
+        fm.is_ok(),
         "Expected valid FileManager from a correct file format"
     );
 }
@@ -45,9 +39,9 @@ fn test_init_from_string_valid() {
 #[test]
 fn test_init_from_string_invalid() {
     let config = dummy_config();
-    let fm = FileManager::init_from_string("log_{date}_{time}<.txt".to_string(), config);
+    let fm = FileManager::init_from_string("log_{date}_{time}<.txt", config);
     assert!(
-        fm.is_none(),
+        fm.is_err(),
         "Expected failure when using forbidden characters in the format"
     );
 }
@@ -56,7 +50,7 @@ fn test_init_from_string_invalid() {
 fn test_remove_rotations() {
     let mut fm = get_dummy_file_manager();
     // Add a valid rotation
-    let added = fm.add_rotation("1 day".to_string());
+    let added = fm.add_rotation("1 day");
     assert!(
         added,
         "Expected add_rotation to succeed for a valid rotation definition"
@@ -74,11 +68,11 @@ fn test_remove_rotations() {
 fn test_add_rotation() {
     let mut fm = get_dummy_file_manager();
     // Valid rotation
-    let valid = fm.add_rotation("1 day".to_string());
+    let valid = fm.add_rotation("1 day");
     assert!(valid, "Expected add_rotation to succeed with '1 day'");
 
     // Invalid rotation should return false.
-    let invalid = fm.add_rotation("invalid".to_string());
+    let invalid = fm.add_rotation("invalid");
     assert!(
         !invalid,
         "Expected add_rotation to fail with an invalid rotation string"
@@ -89,7 +83,7 @@ fn test_add_rotation() {
 fn test_set_and_remove_compression() {
     let mut fm = get_dummy_file_manager();
     // Valid compression type ("zip")
-    let set_ok = fm.set_compression("zip".to_string());
+    let set_ok = fm.set_compression("zip");
     assert!(set_ok, "Expected set_compression to accept 'zip'");
     // Remove compression
     fm.remove_compression();
@@ -143,14 +137,14 @@ fn test_write_log_success() {
     let file_name = fm.get_file_name();
 
     // Write a log message.
-    let log_message = "Test log message".to_string();
-    let write_res = fm.write_log(log_message.clone(), config);
+    let log_message = "Test log message";
+    let write_res = fm.write_log(log_message, config);
     assert!(write_res.is_ok(), "Expected write_log to succeed");
 
     // Verify the log file contains the message.
     let content = fs::read_to_string(&file_name).unwrap_or_else(|_| String::new());
     assert!(
-        content.contains(&log_message),
+        content.contains(log_message),
         "Log file does not contain the written message"
     );
     // Cleanup:
@@ -171,7 +165,7 @@ fn test_compress_file() {
 
     // Set compression to trigger compression.
     assert!(
-        fm.set_compression("zip".to_string()),
+        fm.set_compression("zip"),
         "Expected setting compression to succeed"
     );
     let comp_res = fm.compress_file(&file_name);

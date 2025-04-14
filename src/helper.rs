@@ -1,5 +1,6 @@
 use chrono::{self, Datelike, Timelike};
-use std::{fmt::Display, io::Write};
+use std::io::Write;
+use thiserror::Error;
 
 pub(crate) fn get_current_time_in_utc() -> (u32, u32, i32, u32, u32, u32) {
     let date_time = chrono::Utc::now();
@@ -44,7 +45,7 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
     let minute = seconds / SECONDS_IN_MINUTE;
     let second = seconds % SECONDS_IN_MINUTE;
 
-    let mut is_leap = |y: u64| -> bool { (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0) };
+    let is_leap = |y: u64| -> bool { (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0) };
 
     let days_in_month = |y: u64, m: u64| -> u64 {
         match m {
@@ -81,20 +82,12 @@ pub(crate) fn seconds_to_ymdhms(mut seconds: u64) -> (u64, u64, u64, u64, u64, u
     (year, month, day, hour, minute, second)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum WriteToFileError {
-    UnexpectedError,
+    #[error("unexpected error")]
+    UnexpectedError(std::io::Error),
 }
-impl Display for WriteToFileError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WriteToFileError::UnexpectedError => {
-                write!(f, "unexpected error")
-            }
-        }
-    }
-}
-pub(crate) fn write_to_file(file_name: &String, text: &String) -> Result<(), WriteToFileError> {
+pub(crate) fn write_to_file(file_name: &str, text: &str) -> Result<(), WriteToFileError> {
     let mut file = match std::fs::OpenOptions::new()
         .append(true)
         .create(true)
@@ -102,15 +95,8 @@ pub(crate) fn write_to_file(file_name: &String, text: &String) -> Result<(), Wri
     {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("An error occured while trying to open the file, err: {}", e);
-            return Err(WriteToFileError::UnexpectedError);
+            return Err(WriteToFileError::UnexpectedError(e));
         }
     };
-    if let Err(e) = writeln!(file, "{}", text) {
-        eprintln!("Couldn't write to file: {}", e);
-        Err(WriteToFileError::UnexpectedError)
-    } else {
-        Ok(())
-    }
-    //
+    writeln!(file, "{}", text).map_err(WriteToFileError::UnexpectedError)
 }

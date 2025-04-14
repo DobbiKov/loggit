@@ -1,5 +1,11 @@
 # Release notes 
 
+## Version 0.1.3
+- String optimization has been done across all the library
+
+## Version 0.1.2
+- Fixed an error with std::fs::exists
+
 ## Version 0.1.1
 In this version of the library the file feature has been developed, thus this version contains the next features:
 - adding files where to save logs to

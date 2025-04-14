@@ -1,10 +1,9 @@
-use std::fmt::Display;
-
 use crate::{helper, Level};
 
 use crate::logger::formatter::LogPart;
 
 use super::file_formatter::FileFormatter;
+use thiserror::Error;
 #[derive(Debug, Clone)]
 pub(crate) struct FileName {
     file_name: String,
@@ -12,24 +11,16 @@ pub(crate) struct FileName {
     file_extension: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum FileNameFromFileFormatterError {
+    #[error("no fomrat provided")]
     NoFormatProvided,
+    #[error("incorrect last part")]
     IncorrectLastPart,
+    #[error("no file extension provided")]
     NoFileExtensionProvided,
+    #[error("incorrect file extension")]
     IncorrectFileExtension,
-}
-
-impl Display for FileNameFromFileFormatterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mess = match self {
-            FileNameFromFileFormatterError::NoFormatProvided => "no format provided!",
-            FileNameFromFileFormatterError::IncorrectLastPart => "incorrect last part!",
-            FileNameFromFileFormatterError::NoFileExtensionProvided => "no file extension provided",
-            FileNameFromFileFormatterError::IncorrectFileExtension => "incorrect file extension",
-        };
-        write!(f, "{}", mess)
-    }
 }
 
 impl FileName {
@@ -39,7 +30,7 @@ impl FileName {
             .map(|x| x.to_string())
             .collect()
     }
-    fn is_acceptable_file_extension<'a>(ext: &'a str) -> bool {
+    fn is_acceptable_file_extension(ext: &str) -> bool {
         FileName::acceptable_file_extensions().contains(&ext.to_string())
     }
     pub(crate) fn increase_num(&mut self) {
@@ -115,15 +106,12 @@ impl FileName {
 impl From<FileName> for String {
     fn from(value: FileName) -> Self {
         let mut txt = value.file_name;
-        match value.file_num {
-            Some(num) => {
-                txt.push_str("(");
-                txt.push_str(&num.to_string());
-                txt.push_str("}");
-            }
-            None => {}
+        if let Some(num) = value.file_num {
+            txt.push('(');
+            txt.push_str(&num.to_string());
+            txt.push('}');
         };
-        txt.push_str(".");
+        txt.push('.');
         txt.push_str(&value.file_extension);
         txt
     }

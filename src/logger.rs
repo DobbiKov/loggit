@@ -5,20 +5,26 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
-use crate::logger::file_handler::file_formatter::FileFormatter;
-use file_handler::file_manager::{self, FileManager};
+use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
+use set_errors::{
+    AddRotationError, SetColorizedError, SetCompressionError, SetFileError,
+    SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
+};
 use std::sync::RwLockWriteGuard;
 
 use crate::{
-    helper::{self, get_current_date_in_string, get_current_time_in_string},
+    helper::{get_current_date_in_string, get_current_time_in_string},
     Config, Level, CONFIG,
 };
 //pub(crate) mod formatter;
 pub mod file_handler;
 pub mod formatter;
+pub mod from_file_config;
+pub mod set_errors;
 
 struct LogInfo {
+    module_path: String,
     file: String,
     line: u32,
     message: String,
@@ -76,140 +82,187 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 
 // -- Public configuration setter functions --
 //
-// file
-pub fn set_file(format: &str) {
-    let format = format.to_string();
+
+/// Makes all logs to be saved to files. The files take names accordinlgy to the provided format.
+///
+///  Configures Loggit to write logs to a file. The `format` string is used to generate the file name and must include a file extension. The format may include placeholders such as:
+///  - `{time}` – Current time.
+///  - `{date}` – Current date.
+///  - `{level}` - Current loggin level.
+///  - Other literal text.
+///
+///- **Allowed values:**  
+///  - The format string **must** end with a text section containing a file extension (e.g. `.txt` or `.log`).  
+///  - Any forbidden characters such as `<`, `>`, `&`, or `%` will cause configuration to fail.  
+///  - *Examples:*  
+///    - `"app_{date}_{time}.txt"`  
+///    - `"{level}-log-on-{date}.log"`
+pub fn set_file(format: &str) -> Result<(), SetFileError> {
     let file_manager = match FileManager::init_from_string(format, get_config()) {
-        Some(r) => r,
-        None => {
-            eprintln!("Couldn't establish file config!");
-            return;
+        Ok(r) => r,
+        Err(e) => {
+            return Err(SetFileError::UnableToLoadFromString(e));
         }
     };
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
-        eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetFileError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(file_manager);
     }
+    Ok(())
 }
-pub fn set_compression(ctype: &str) {
+
+///Enables file compression for log archival.
+///
+///- **Description:**  
+///  Sets the compression type for log files. After file logging is configured, you can enable compression to archive old logs.
+///
+///- **Allowed values:**  
+///  - Accepts only a single allowed value: `"zip"`.  
+///  - Any other string will output an error and leave the compression configuration unchanged.
+pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
-        eprintln!("Can't set a compression when the file isn't set!");
-        return;
+        return Err(SetCompressionError::FileIsntSet);
     }
     let mut f_manager = f_manager.unwrap();
-    f_manager.set_compression(ctype.to_string());
+    f_manager.set_compression(ctype);
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetCompressionError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(f_manager);
     }
+    Ok(())
 }
-pub fn add_rotation(constraint: &str) {
+
+///Adds a new constraint for rotating log files.
+///
+///- **Description:**  
+///  Adds a rotation strategy so that log files are rotated based on either time or file size. When a log file “expires” under the configured constraint, a new file is automatically created (and optionally compressed).
+///
+///- **Allowed values:**  
+///  The `constraint` string can be in one of the following formats:
+///  - **Period rotation:**  
+///    - Numeric value followed by a unit:  
+///      - `"1 hour"`, `"2 day"`, `"33 week"`, `"6 month"`, `"12 year"`  
+///      - The unit is case sensitive and must match exactly (e.g. `" hour"`, `" day"`, etc.).
+///  - **Time-based rotation:**  
+///    - Time in a 24‑hour format using a colon separator:  
+///      - `"HH:MM"` (e.g. `"12:30"`).
+///  - **Size-based rotation:**  
+///    - Numeric value followed by a size unit:  
+///      - `"500 KB"`, `"5 MB"`, `"1 GB"`, or `"2 TB"`  
+///      - Note the space before the unit.
+///
+///- If an incorrect value is provided, the rotation is not added and an error message is logged.
+pub fn add_rotation(constraint: &str) -> Result<(), AddRotationError> {
     let f_manager = get_file_manager();
     if f_manager.is_none() {
-        eprintln!("Can't set a compression when the file isn't set!");
-        return;
+        eprintln!("Can't add a rotation when the file isn't set!");
+        return Err(AddRotationError::FileIsntSet);
     }
     let mut f_manager = f_manager.unwrap();
 
-    if !f_manager.add_rotation(constraint.to_string()) {
-        eprintln!("Incorrect value to the rotation!");
-        return;
+    if !f_manager.add_rotation(constraint) {
+        eprintln!("Incorrect value given for the rotation!");
+        return Err(AddRotationError::IncorrectFormatGiven);
     }
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(AddRotationError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.file_manager = Some(f_manager);
     }
+    Ok(())
 }
 
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.
-pub fn set_log_level(lvl: Level) {
+pub fn set_log_level(lvl: Level) -> Result<(), SetLogLevelError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetLogLevelError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.level = lvl;
     }
+    Ok(())
 }
 /// Enables or disables terminal output of log messages.
 /// When set to false, log messages will not be printed to the terminal.
-pub fn set_print_to_terminal(val: bool) {
+pub fn set_print_to_terminal(val: bool) -> Result<(), SetPrintToTerminalError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetPrintToTerminalError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.print_to_terminal = val;
     }
+    Ok(())
 }
 /// Enables or disables colorized output of log messages.
 /// If enabled, logs will be printed with colors as configured in the format.
-pub fn set_colorized(val: bool) {
+pub fn set_colorized(val: bool) -> Result<(), SetColorizedError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetColorizedError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         cfg.colorized = val;
     }
+    Ok(())
 }
 
 /// Sets a global log formatting string for all log levels.
 /// This function updates the formatting of each level to the given template.
-pub fn set_global_formatting(format: &str) {
-    set_level_formatting(Level::TRACE, format);
-    set_level_formatting(Level::DEBUG, format);
-    set_level_formatting(Level::INFO, format);
-    set_level_formatting(Level::WARN, format);
-    set_level_formatting(Level::ERROR, format);
+pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError> {
+    set_level_formatting(Level::TRACE, format)?;
+    set_level_formatting(Level::DEBUG, format)?;
+    set_level_formatting(Level::INFO, format)?;
+    set_level_formatting(Level::WARN, format)?;
+    set_level_formatting(Level::ERROR, format)?;
+    Ok(())
 }
 
 /// Sets a custom log formatting string for the specified log level.
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
-pub fn set_level_formatting(level: Level, format: &str) {
-    let format = format.to_string();
+pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
         eprintln!("An error while getting the config to write!");
-        return;
+        return Err(SetLevelFormattingError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
     if let Some(ref mut cfg) = *config_lock {
         match level {
-            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format.clone()),
-            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format.clone()),
+            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format)?,
+            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format)?,
+            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format)?,
+            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format)?,
+            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format)?,
         }
     }
+    Ok(())
 }
 
 // -- Internal functions for logging --
@@ -226,6 +279,7 @@ fn string_log(log_info: &LogInfo, colorize: bool) -> String {
             formatter::LogPart::Date => &curr_date,
             formatter::LogPart::Level => &log_info.level.to_string(),
             formatter::LogPart::Text(text) => &text.clone(),
+            formatter::LogPart::ModulePath => &log_info.module_path,
         };
         if colorize && log_part.color.is_some() {
             let colored_str = LogColor::colorize_str(str_to_push, log_part.color.unwrap());
@@ -244,7 +298,7 @@ fn write_file_log(log_info: &LogInfo) {
     let mut file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
-    let res = file_manager.write_log(mess_to_print, get_config());
+    let res = file_manager.write_log(&mess_to_print, get_config());
     match res {
         Ok(_) => {}
         Err(e) => {
@@ -263,17 +317,6 @@ fn write_file_log(log_info: &LogInfo) {
             cfg.file_manager = Some(file_manager)
         }
     }
-    // TODO: here_ve_must_verify_the_time_and_others constraints
-    //match helper::write_to_file(&file_config.get_file_name(), &mess_to_print) {
-    //    Ok(()) => {}
-    //    Err(_) => {
-    //        println!(
-    //            "SOMETHING WENT WRONG WHILE TRYING TO WRITE TO A FILE! {} | {}",
-    //            file_config.get_file_name(),
-    //            mess_to_print
-    //        );
-    //    }
-    //}
 }
 fn log_handler(log_info: LogInfo) {
     if get_config().print_to_terminal {
@@ -285,9 +328,10 @@ fn log_handler(log_info: LogInfo) {
 }
 
 // handles call from macro and passes deeper
-fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
+fn macro_handler(module_path: &str, file: &str, line: u32, deb_str: String, level: Level) {
     let log_info = LogInfo {
-        file,
+        module_path: module_path.to_string(),
+        file: file.to_string(),
         line,
         message: deb_str,
         level,
@@ -300,8 +344,8 @@ fn macro_handler(file: String, line: u32, deb_str: String, level: Level) {
 /// Internal function for handling log macros.
 ///
 /// It is used by the public logger macros to format and output the log message.
-pub fn __debug_handler(file: &str, line: u32, deb_str: String, level: Level) {
-    macro_handler(file.to_string(), line, deb_str, level);
+pub fn __debug_handler(module_path: &str, file: &str, line: u32, deb_str: String, level: Level) {
+    macro_handler(module_path, file, line, deb_str, level);
 }
 
 // -- Publicly exported logging macros --
@@ -319,7 +363,7 @@ pub fn __debug_handler(file: &str, line: u32, deb_str: String, level: Level) {
 macro_rules! trace {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::TRACE);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::TRACE);
         }};
     }
 
@@ -336,7 +380,7 @@ macro_rules! trace {
 macro_rules! debug {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::DEBUG);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::DEBUG);
         }};
     }
 
@@ -353,7 +397,7 @@ macro_rules! debug {
 macro_rules! info {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::INFO);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::INFO);
         }};
     }
 
@@ -370,7 +414,7 @@ macro_rules! info {
 macro_rules! warn {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::WARN);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::WARN);
         }};
     }
 
@@ -387,7 +431,7 @@ macro_rules! warn {
 macro_rules! error {
         ($($arg:tt)*) => {{
             let res_str = format!($($arg)*);
-            $crate::logger::__debug_handler(file!(), line!(), res_str, $crate::Level::ERROR);
+            $crate::logger::__debug_handler(module_path!(), file!(), line!(), res_str, $crate::Level::ERROR);
         }};
     }
 
