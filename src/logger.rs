@@ -301,7 +301,10 @@ fn string_log(log_info: &LogInfo, colorize: bool) -> String {
 }
 fn print_log(log_info: &LogInfo) {
     let mess_to_print = string_log(log_info, get_config().colorized);
-    println!("{}", mess_to_print);
+    match log_info.level {
+        Level::ERROR => eprintln!("{}", mess_to_print),
+        _ => println!("{}", mess_to_print),
+    };
 }
 fn write_file_log(log_info: &LogInfo) {
     let mut file_manager = get_file_manager().unwrap();
