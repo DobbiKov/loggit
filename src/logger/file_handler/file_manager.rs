@@ -398,7 +398,7 @@ impl FileManager {
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub(crate) enum RotationType {
-    Period(u32),  // every 1 week for example
+    Period(u64),  // every 1 week for example
     Time(u8, u8), //every day at 12:00 for example
     Size(u64),    //500 MB for example
 }
@@ -461,7 +461,7 @@ impl RotationType {
             || text.ends_with(" year")
         {
             // period
-            let multiply_factor;
+            let multiply_factor: u64;
             let finish_txt: &str = {
                 if text.ends_with(" hour") {
                     multiply_factor = 60 * 60;
@@ -483,7 +483,7 @@ impl RotationType {
             let fin_len = finish_txt.len();
             let str_len = text.len();
             let text_to_parse = &text[0..(str_len - fin_len)];
-            let num: u32 = match text_to_parse.parse() {
+            let num: u64 = match text_to_parse.parse() {
                 Ok(n) => n,
                 Err(_) => {
                     return None;
@@ -513,9 +513,11 @@ impl Rotation {
                 }
             }
             RotationType::Time(h, m) => {
+                let h = h as u64;
+                let m = m as u64;
                 let now = chrono::Local::now();
-                let curr_h: u8 = now.hour().try_into().unwrap_or(0);
-                let curr_m: u8 = now.minute().try_into().unwrap_or(0);
+                let curr_h: u64 = now.hour().try_into().unwrap_or(0);
+                let curr_m: u64 = now.minute().try_into().unwrap_or(0);
                 if curr_h < h || (curr_h == h && curr_m < m) {
                     // if next rotation is today
                     let unix: u64 = now.timestamp().try_into().unwrap_or(0);
