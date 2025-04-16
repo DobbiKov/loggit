@@ -18,6 +18,8 @@ pub enum SetCompressionError {
     UnableToLoadConfig,
     #[error("a file isn't set")]
     FileIsntSet,
+    #[error("incorrect compression value")]
+    IncorrectCompressionValue,
 }
 
 #[derive(Error, Debug)]

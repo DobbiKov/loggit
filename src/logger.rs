@@ -130,7 +130,9 @@ pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
         return Err(SetCompressionError::FileIsntSet);
     }
     let mut f_manager = f_manager.unwrap();
-    f_manager.set_compression(ctype);
+    if !f_manager.set_compression(ctype) {
+        return Err(SetCompressionError::IncorrectCompressionValue);
+    }
 
     let config_lock = get_write_config();
     if config_lock.is_none() {

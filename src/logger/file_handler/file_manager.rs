@@ -136,10 +136,7 @@ impl FileManager {
                 self.file_constraints.compression = Some(r);
                 true
             }
-            None => {
-                eprintln!("Incorrect value to the compression field");
-                false
-            }
+            None => false,
         }
     }
     pub(crate) fn remove_compression(&mut self) {
