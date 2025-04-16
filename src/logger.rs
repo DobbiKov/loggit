@@ -247,7 +247,7 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 
 /// Sets a custom log formatting string for the specified log level.
 ///
-/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `module` and `{message}`.
+/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `{module}` and `{message}`.
 ///
 /// Example:
 /// ```rust
