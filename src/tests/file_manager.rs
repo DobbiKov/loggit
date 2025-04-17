@@ -1,6 +1,6 @@
 use crate::logger::file_handler::file_manager::{CompressFileError, FileManager};
-use crate::Config;
 use crate::Level;
+use crate::{logger, Config};
 use std::fs;
 use std::path::Path;
 
@@ -168,6 +168,9 @@ fn test_compress_file() {
         fm.set_compression("zip"),
         "Expected setting compression to succeed"
     );
+
+    assert!(logger::set_archive_dir("loggit_archives").is_ok());
+
     let comp_res = fm.compress_file(&file_name);
     assert!(comp_res.is_ok(), "Expected compress_file to succeed");
 

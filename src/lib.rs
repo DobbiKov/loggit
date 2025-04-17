@@ -52,7 +52,7 @@
 
 use logger::{file_handler::file_manager::FileManager, formatter::LogFormatter};
 use once_cell::sync::Lazy;
-use std::{fmt::Display, sync::RwLock};
+use std::{fmt::Display, path::PathBuf, sync::RwLock};
 pub(crate) mod helper;
 
 #[cfg(test)]
@@ -80,6 +80,7 @@ struct Config {
     warn_log_format: LogFormatter,
     error_log_format: LogFormatter,
     file_manager: Option<FileManager>,
+    archive_dir: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -97,6 +98,7 @@ impl Default for Config {
             )
             .unwrap(),
             file_manager: None,
+            archive_dir: None,
         }
     }
 }

@@ -5,19 +5,24 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
+use archivation::ensure_archive_dir;
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
 use set_errors::{
-    AddRotationError, SetColorizedError, SetCompressionError, SetFileError,
+    AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError, SetFileError,
     SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
 };
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use std::{
+    path::PathBuf,
+    sync::{RwLockReadGuard, RwLockWriteGuard},
+};
 
 use crate::{
     helper::{get_current_date_in_string, get_current_time_in_string},
     Config, Level, CONFIG,
 };
 //pub(crate) mod formatter;
+pub mod archivation;
 pub mod file_handler;
 pub mod formatter;
 pub mod from_file_config;
@@ -109,6 +114,22 @@ pub fn set_file(format: &str) -> Result<(), SetFileError> {
     config_lock.file_manager = Some(file_manager);
 
     Ok(())
+}
+
+pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
+    let config_lock = get_write_config();
+    if config_lock.is_none() {
+        return Err(SetArchiveDirError::UnableToLoadConfig);
+    }
+
+    let path = PathBuf::from(dir);
+    archivation::ensure_archivable_dir(&path)?; // if we cannot create it as a dir, an error
+                                                // returns
+
+    let mut config_lock = config_lock.unwrap();
+    config_lock.archive_dir = Some(path.clone());
+
+    Ok(path)
 }
 
 ///Enables file compression for log archival.
