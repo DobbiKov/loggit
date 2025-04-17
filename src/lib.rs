@@ -58,7 +58,7 @@ pub(crate) mod helper;
 #[cfg(test)]
 mod tests;
 
-#[derive(Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 /// Represents the log level used throughout the application.
 pub enum Level {
     TRACE,

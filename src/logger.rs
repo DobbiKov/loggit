@@ -130,7 +130,9 @@ pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
         return Err(SetCompressionError::FileIsntSet);
     }
     let mut f_manager = f_manager.unwrap();
-    f_manager.set_compression(ctype);
+    if !f_manager.set_compression(ctype) {
+        return Err(SetCompressionError::IncorrectCompressionValue);
+    }
 
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -245,7 +247,7 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 
 /// Sets a custom log formatting string for the specified log level.
 ///
-/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `module` and `{message}`.
+/// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `{module}` and `{message}`.
 ///
 /// Example:
 /// ```rust
@@ -302,7 +304,10 @@ fn string_log(log_info: &LogInfo, colorize: bool) -> String {
 }
 fn print_log(log_info: &LogInfo) {
     let mess_to_print = string_log(log_info, get_config().colorized);
-    println!("{}", mess_to_print);
+    match log_info.level {
+        Level::ERROR => eprintln!("{}", mess_to_print),
+        _ => println!("{}", mess_to_print),
+    };
 }
 fn write_file_log(log_info: &LogInfo) {
     let mut file_manager = get_file_manager().unwrap();
