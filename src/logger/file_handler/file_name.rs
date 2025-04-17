@@ -12,7 +12,7 @@ pub(crate) struct FileName {
 }
 
 #[derive(Debug, Error)]
-pub(crate) enum FileNameFromFileFormatterError {
+pub enum FileNameFromFileFormatterError {
     #[error("no fomrat provided")]
     NoFormatProvided,
     #[error("incorrect last part")]

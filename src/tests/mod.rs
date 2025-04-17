@@ -152,7 +152,7 @@ fn test_set_file_and_compression_and_rotation() {
 
     // Check that the internal config now includes a file_manager.
     let config_state = CONFIG.read().unwrap();
-    let cfg = config_state.as_ref().unwrap();
+    let cfg = config_state;
     assert!(cfg.file_manager.is_some());
 
     // Optionally, clean up any generated file if needed.

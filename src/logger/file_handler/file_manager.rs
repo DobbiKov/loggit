@@ -1,7 +1,7 @@
 use std::{
+    fmt::format,
     fs::File,
     io::{self, BufReader},
-    os::unix::fs::MetadataExt,
 };
 
 use chrono::Timelike;
@@ -10,6 +10,7 @@ use zip::{result::ZipError, write::SimpleFileOptions, CompressionMethod, ZipWrit
 
 use crate::{
     helper::{self, WriteToFileError},
+    logger::archivation,
     Config,
 };
 
@@ -35,6 +36,8 @@ pub enum FileManagerFromStringError {
 
 #[derive(Error, Debug)]
 pub(crate) enum CompressFileError {
+    #[error("error with verifying archivation folder {0}")]
+    UnableToCreateArchivationFolder(std::io::Error),
     #[error("unable to create a zip file: {0}")]
     UnableToCreateZipFile(std::io::Error),
     #[error("unable to open file to compress: {0}")]
@@ -173,10 +176,11 @@ impl FileManager {
     fn get_path_to_compression_foler() -> String {
         "./loggit_archives/".to_string()
     }
+
     /// Returns true if there's the directory to store archives to, false if there's no one and
     /// creates it
     pub(crate) fn verify_arichive_dir() -> Result<bool, std::io::Error> {
-        let folder_path = &FileManager::get_path_to_compression_foler();
+        let folder_path = &archivation::archive_dir();
         match std::path::Path::new(folder_path).exists() {
             true => Ok(true),
             _ => match std::fs::create_dir(folder_path) {
@@ -187,7 +191,10 @@ impl FileManager {
     }
     /// compresses a file by the given path in a zip archive
     fn compress_zip(&self, path: &str) -> Result<(), CompressFileError> {
-        let zip_file_path = format!("./loggit_archives/{}.zip", path);
+        if let Err(e) = archivation::ensure_archive_dir() {
+            return Err(CompressFileError::UnableToCreateArchivationFolder(e));
+        }
+        let zip_file_path = archivation::archive_dir().join(format!("{}.zip", path));
         let zip_file = std::fs::File::create(&zip_file_path)
             .map_err(CompressFileError::UnableToCreateZipFile)?;
         let mut zip = ZipWriter::new(zip_file);
@@ -197,7 +204,8 @@ impl FileManager {
             std::fs::File::open(path).map_err(CompressFileError::UnableToOpenFileToCompress)?;
         let mut reader = BufReader::new(file);
 
-        zip.start_file(path, options)
+        let entry_name = std::path::Path::new(path).file_name().unwrap_or_default().to_string_lossy();
+        zip.start_file(entry_name, options)
             .map_err(CompressFileError::UnableToStartZipArchiving)?;
         std::io::copy(&mut reader, &mut zip).map_err(CompressFileError::UnableToCopyContents)?;
         zip.finish()
@@ -255,7 +263,7 @@ impl FileManager {
                     e,
                 ));
             }
-            Ok(data) => data.size(),
+            Ok(data) => data.len(),
         };
         let mut last_idx: i32 = -1;
         // we need last_idx for: if we found not satsfying constraint, than we create a new file,
@@ -304,7 +312,9 @@ impl FileManager {
             let rot = self.file_constraints.rotation[idx];
             match rot.rotation_type {
                 RotationType::Period(_) | RotationType::Time(_, _) => {
-                    let unix_now = chrono::Utc::now().timestamp() as u64;
+                    let unix_now = chrono::Utc::now().timestamp()        
+                            .max(0) // never negative
+                            as u64;
                     if unix_now > rot.next_rotation || last_idx != -1 {
                         // if current time is ahead of our
                         // rotation that we set a new one and create
@@ -431,13 +441,13 @@ impl RotationType {
             //size
             let multiply_factor;
             if text.ends_with(" KB") {
-                multiply_factor = 1;
-            } else if text.ends_with(" MB") {
                 multiply_factor = 1024;
-            } else if text.ends_with(" GB") {
+            } else if text.ends_with(" MB") {
                 multiply_factor = 1024 * 1024;
-            } else if text.ends_with(" TB") {
+            } else if text.ends_with(" GB") {
                 multiply_factor = 1024 * 1024 * 1024;
+            } else if text.ends_with(" TB") {
+                multiply_factor = 1024 * 1024 * 1024 * 1024;
             } else {
                 multiply_factor = 1;
             }
@@ -503,7 +513,7 @@ impl Rotation {
         match rot_type {
             RotationType::Period(p) => {
                 let unix_time: u64 = chrono::Utc::now().timestamp().try_into().unwrap_or(0);
-                let next_to_rotate = unix_time + (p as u64);
+                let next_to_rotate = unix_time + p;
                 Rotation {
                     rotation_type: rot_type,
                     next_rotation: next_to_rotate,
@@ -513,13 +523,13 @@ impl Rotation {
                 let h = h as u64;
                 let m = m as u64;
                 let now = chrono::Local::now();
-                let curr_h: u64 = now.hour().try_into().unwrap_or(0);
-                let curr_m: u64 = now.minute().try_into().unwrap_or(0);
+                let curr_h: u64 = now.hour().into();
+                let curr_m: u64 = now.minute().into();
                 if curr_h < h || (curr_h == h && curr_m < m) {
                     // if next rotation is today
-                    let unix: u64 = now.timestamp().try_into().unwrap_or(0);
-                    let secs_curr = ((curr_h as u64) * 60 * 60) + ((curr_m as u64) * 60);
-                    let secs_desirable = ((h as u64) * 60 * 60) + ((m as u64) * 60);
+                    let unix: u64 = now.timestamp().max(0) as u64;
+                    let secs_curr = ((curr_h) * 60 * 60) + (curr_m * 60);
+                    let secs_desirable = (h * 60 * 60) + (m * 60);
                     let diff = secs_desirable - secs_curr;
                     Rotation {
                         rotation_type: rot_type,
@@ -527,10 +537,10 @@ impl Rotation {
                     }
                 } else {
                     //tomorrow
-                    let unix: u64 = now.timestamp().try_into().unwrap_or(0);
+                    let unix: u64 = now.timestamp().max(0) as u64;
                     let secs_till_tomorrow =
-                        (24 * 60 * 60) - (((curr_h as u64) * 60 * 60) + ((curr_m as u64) * 60));
-                    let secs_desirable = ((h * 60 * 60) + (m * 60)) as u64;
+                        (24 * 60 * 60) - ((curr_h * 60 * 60) + (curr_m * 60));
+                    let secs_desirable = ((h * 60 * 60) + (m * 60));
                     Rotation {
                         rotation_type: rot_type,
                         next_rotation: unix + secs_till_tomorrow + secs_desirable,

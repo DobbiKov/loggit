@@ -8,7 +8,7 @@ pub(crate) struct FileFormatter {
 }
 
 #[derive(Debug, Error)]
-pub(crate) enum FileFormatterTryFromStringError {
+pub enum FileFormatterTryFromStringError {
     #[error("an incrorrect caracter given: {0}")]
     IncorrectCaracterGiven(char),
     #[error("An empty string was provided!")]

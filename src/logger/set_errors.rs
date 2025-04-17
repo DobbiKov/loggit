@@ -57,6 +57,14 @@ pub enum SetLevelFormattingError {
     IncorrectFormatGiven(ParseStringToWrappersError),
 }
 
+#[derive(Error, Debug)]
+pub enum SetArchiveDirError {
+    #[error("unable to load config")]
+    UnableToLoadConfig,
+    #[error("unable to create dir {0}")]
+    UnableToCreateDir(#[from] std::io::Error),
+}
+
 impl From<ParseStringToWrappersError> for SetLevelFormattingError {
     fn from(value: ParseStringToWrappersError) -> Self {
         SetLevelFormattingError::IncorrectFormatGiven(value)
