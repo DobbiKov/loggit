@@ -156,7 +156,14 @@ fn test_set_file_and_compression_and_rotation() {
     assert!(cfg.file_manager.is_some());
 
     // Optionally, clean up any generated file if needed.
-    let file_name = cfg.file_manager.as_ref().unwrap().get_file_name();
+    let file_name = cfg
+        .file_manager
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .get_file_name();
+
     if fs::metadata(&file_name).is_ok() {
         let _ = fs::remove_file(file_name);
     }

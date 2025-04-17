@@ -9,12 +9,12 @@ use archivation::ensure_archive_dir;
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
 use set_errors::{
-    AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError, SetFileError,
-    SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
+    AccessError, AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError,
+    SetFileError, SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
 };
 use std::{
     path::PathBuf,
-    sync::{RwLockReadGuard, RwLockWriteGuard},
+    sync::{Arc, Mutex, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use crate::{
@@ -34,6 +34,21 @@ struct LogInfo {
     line: u32,
     message: String,
     level: Level,
+}
+
+// helper
+fn with_fm<T, E, F>(f: F) -> Result<T, E>
+where
+    F: FnOnce(&mut FileManager) -> Result<T, E>,
+    E: From<AccessError>,
+{
+    let cfg_lock = CONFIG.write().map_err(|_| AccessError::LoadConfig)?;
+    let fm_arc = cfg_lock
+        .file_manager
+        .as_ref()
+        .ok_or(AccessError::FileNotSet)?;
+    let mut guard = fm_arc.lock().unwrap(); // poisoned = panic, fine for logger
+    f(&mut *guard)
 }
 
 // -- Getter functions for config --
@@ -61,11 +76,6 @@ fn get_log_format(level: Level) -> LogFormatter {
         Level::WARN => tmp_cfg.warn_log_format.clone(),
         Level::ERROR => tmp_cfg.error_log_format.clone(),
     }
-}
-
-fn get_file_manager() -> Option<FileManager> {
-    let tmp_cfg = get_config();
-    tmp_cfg.file_manager.clone()
 }
 
 fn get_write_config() -> Option<RwLockWriteGuard<'static, Config>> {
@@ -111,7 +121,7 @@ pub fn set_file(format: &str) -> Result<(), SetFileError> {
         return Err(SetFileError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    config_lock.file_manager = Some(file_manager);
+    config_lock.file_manager = Some(Arc::new(Mutex::new(file_manager)));
 
     Ok(())
 }
@@ -141,23 +151,13 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
 ///  - Accepts only a single allowed value: `"zip"`.  
 ///  - Any other string will output an error and leave the compression configuration unchanged.
 pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
-    let f_manager = get_file_manager();
-    if f_manager.is_none() {
-        return Err(SetCompressionError::FileIsntSet);
-    }
-    let mut f_manager = f_manager.unwrap();
-    if !f_manager.set_compression(ctype) {
-        return Err(SetCompressionError::IncorrectCompressionValue);
-    }
-
-    let config_lock = get_write_config();
-    if config_lock.is_none() {
-        eprintln!("An error while getting the config to write!");
-        return Err(SetCompressionError::UnableToLoadConfig);
-    }
-    let mut config_lock = config_lock.unwrap();
-    config_lock.file_manager = Some(f_manager);
-    Ok(())
+    with_fm(|fm| {
+        if fm.set_compression(ctype) {
+            return Ok(());
+        } else {
+            return Err(SetCompressionError::IncorrectCompressionValue);
+        }
+    })
 }
 
 ///Adds a new constraint for rotating log files.
@@ -181,26 +181,13 @@ pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
 ///
 ///- If an incorrect value is provided, the rotation is not added and an error message is logged.
 pub fn add_rotation(constraint: &str) -> Result<(), AddRotationError> {
-    let f_manager = get_file_manager();
-    if f_manager.is_none() {
-        eprintln!("Can't add a rotation when the file isn't set!");
-        return Err(AddRotationError::FileIsntSet);
-    }
-    let mut f_manager = f_manager.unwrap();
-
-    if !f_manager.add_rotation(constraint) {
-        eprintln!("Incorrect value given for the rotation!");
-        return Err(AddRotationError::IncorrectFormatGiven);
-    }
-
-    let config_lock = get_write_config();
-    if config_lock.is_none() {
-        eprintln!("An error while getting the config to write!");
-        return Err(AddRotationError::UnableToLoadConfig);
-    }
-    let mut config_lock = config_lock.unwrap();
-    config_lock.file_manager = Some(f_manager);
-    Ok(())
+    with_fm(|fm| {
+        if fm.add_rotation(constraint) {
+            Ok(())
+        } else {
+            Err(AddRotationError::IncorrectFormatGiven)
+        }
+    })
 }
 
 /// Sets the minimum log level to display.
@@ -315,26 +302,21 @@ fn print_log(log_info: &LogInfo) {
     };
 }
 fn write_file_log(log_info: &LogInfo) {
-    let mut file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
-    let res = file_manager.write_log(&mess_to_print, get_config().clone());
-    match res {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!(
-                "Couldn't write a log to the file due to the next error: {}",
-                e
-            );
+    let _ = with_fm::<(), AccessError, _>(|file_manager| {
+        let res = file_manager.write_log(&mess_to_print, get_config().clone());
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!(
+                    "Couldn't write a log to the file due to the next error: {}",
+                    e
+                );
+                Ok(()) // we don't return a result from this function
+            }
         }
-    }
-
-    // file manager can be updated, (for example change of file) thus it needs to be updated in the
-    // config
-    let w_conf = get_write_config();
-    if let Some(mut temp_cfg) = w_conf {
-        temp_cfg.file_manager = Some(file_manager)
-    }
+    });
 }
 fn log_handler(log_info: LogInfo) {
     if get_config().print_to_terminal {
