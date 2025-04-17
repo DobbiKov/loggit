@@ -114,10 +114,10 @@ impl Display for Level {
     }
 }
 
-static CONFIG: Lazy<RwLock<Option<Config>>> = Lazy::new(|| {
-    RwLock::new(Some(Config {
+static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| {
+    RwLock::new(Config {
         ..Default::default()
-    }))
+    })
 });
 
 pub mod logger;

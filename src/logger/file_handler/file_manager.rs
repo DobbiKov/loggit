@@ -503,7 +503,7 @@ impl Rotation {
         match rot_type {
             RotationType::Period(p) => {
                 let unix_time: u64 = chrono::Utc::now().timestamp().try_into().unwrap_or(0);
-                let next_to_rotate = unix_time + (p as u64);
+                let next_to_rotate = unix_time + p;
                 Rotation {
                     rotation_type: rot_type,
                     next_rotation: next_to_rotate,
@@ -513,13 +513,13 @@ impl Rotation {
                 let h = h as u64;
                 let m = m as u64;
                 let now = chrono::Local::now();
-                let curr_h: u64 = now.hour().try_into().unwrap_or(0);
-                let curr_m: u64 = now.minute().try_into().unwrap_or(0);
+                let curr_h: u64 = now.hour().into();
+                let curr_m: u64 = now.minute().into();
                 if curr_h < h || (curr_h == h && curr_m < m) {
                     // if next rotation is today
                     let unix: u64 = now.timestamp().try_into().unwrap_or(0);
-                    let secs_curr = ((curr_h as u64) * 60 * 60) + ((curr_m as u64) * 60);
-                    let secs_desirable = ((h as u64) * 60 * 60) + ((m as u64) * 60);
+                    let secs_curr = ((curr_h) * 60 * 60) + ((curr_m) * 60);
+                    let secs_desirable = ((h) * 60 * 60) + ((m) * 60);
                     let diff = secs_desirable - secs_curr;
                     Rotation {
                         rotation_type: rot_type,
@@ -529,8 +529,8 @@ impl Rotation {
                     //tomorrow
                     let unix: u64 = now.timestamp().try_into().unwrap_or(0);
                     let secs_till_tomorrow =
-                        (24 * 60 * 60) - (((curr_h as u64) * 60 * 60) + ((curr_m as u64) * 60));
-                    let secs_desirable = ((h * 60 * 60) + (m * 60)) as u64;
+                        (24 * 60 * 60) - (((curr_h) * 60 * 60) + ((curr_m) * 60));
+                    let secs_desirable = ((h * 60 * 60) + (m * 60));
                     Rotation {
                         rotation_type: rot_type,
                         next_rotation: unix + secs_till_tomorrow + secs_desirable,

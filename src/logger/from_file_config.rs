@@ -3,10 +3,8 @@
 
 use crate::Level;
 
-use super::Config;
 use crate::logger;
 use env_file_reader;
-use std::convert::TryFrom;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

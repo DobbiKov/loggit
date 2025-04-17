@@ -37,12 +37,7 @@ fn temp_env_file(contents: &str) -> PathBuf {
 
 /// Helper that returns a cloned snapshot of CONFIG after acquiring a read lock.
 fn config_snapshot() -> crate::Config {
-    CONFIG
-        .read()
-        .unwrap()
-        .as_ref()
-        .expect("CONFIG should be initialised")
-        .clone()
+    CONFIG.read().expect("CONFIG should be initialised").clone()
 }
 
 #[test]

@@ -11,7 +11,7 @@ use set_errors::{
     AddRotationError, SetColorizedError, SetCompressionError, SetFileError,
     SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
 };
-use std::sync::RwLockWriteGuard;
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{
     helper::{get_current_date_in_string, get_current_time_in_string},
@@ -35,39 +35,35 @@ struct LogInfo {
 fn get_log_level() -> Level {
     get_config().level
 }
-fn get_config() -> Config {
+fn get_config() -> RwLockReadGuard<'static, Config> {
     let config_lock = match CONFIG.read() {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Problem with getting config, here's an error: {}", e);
-            return Default::default();
+            panic!("Poisoned lock")
         }
     };
-    if let Some(ref cfg) = *config_lock {
-        cfg.clone()
-    } else {
-        eprintln!("Problem with getting config!");
-        Default::default()
-    }
+
+    config_lock
 }
 
 fn get_log_format(level: Level) -> LogFormatter {
     let tmp_cfg = get_config();
     match level {
-        Level::TRACE => tmp_cfg.trace_log_format,
-        Level::DEBUG => tmp_cfg.debug_log_format,
-        Level::INFO => tmp_cfg.info_log_format,
-        Level::WARN => tmp_cfg.warn_log_format,
-        Level::ERROR => tmp_cfg.error_log_format,
+        Level::TRACE => tmp_cfg.trace_log_format.clone(),
+        Level::DEBUG => tmp_cfg.debug_log_format.clone(),
+        Level::INFO => tmp_cfg.info_log_format.clone(),
+        Level::WARN => tmp_cfg.warn_log_format.clone(),
+        Level::ERROR => tmp_cfg.error_log_format.clone(),
     }
 }
 
 fn get_file_manager() -> Option<FileManager> {
     let tmp_cfg = get_config();
-    tmp_cfg.file_manager
+    tmp_cfg.file_manager.clone()
 }
 
-fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
+fn get_write_config() -> Option<RwLockWriteGuard<'static, Config>> {
     match CONFIG.write() {
         Ok(guard) => Some(guard),
         Err(e) => {
@@ -98,7 +94,7 @@ fn get_write_config() -> Option<RwLockWriteGuard<'static, Option<Config>>> {
 ///    - `"app_{date}_{time}.txt"`  
 ///    - `"{level}-log-on-{date}.log"`
 pub fn set_file(format: &str) -> Result<(), SetFileError> {
-    let file_manager = match FileManager::init_from_string(format, get_config()) {
+    let file_manager = match FileManager::init_from_string(format, get_config().clone()) {
         Ok(r) => r,
         Err(e) => {
             return Err(SetFileError::UnableToLoadFromString(e));
@@ -110,9 +106,8 @@ pub fn set_file(format: &str) -> Result<(), SetFileError> {
         return Err(SetFileError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        cfg.file_manager = Some(file_manager);
-    }
+    config_lock.file_manager = Some(file_manager);
+
     Ok(())
 }
 
@@ -140,9 +135,7 @@ pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
         return Err(SetCompressionError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        cfg.file_manager = Some(f_manager);
-    }
+    config_lock.file_manager = Some(f_manager);
     Ok(())
 }
 
@@ -185,9 +178,7 @@ pub fn add_rotation(constraint: &str) -> Result<(), AddRotationError> {
         return Err(AddRotationError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        cfg.file_manager = Some(f_manager);
-    }
+    config_lock.file_manager = Some(f_manager);
     Ok(())
 }
 
@@ -200,9 +191,8 @@ pub fn set_log_level(lvl: Level) -> Result<(), SetLogLevelError> {
         return Err(SetLogLevelError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        cfg.level = lvl;
-    }
+    config_lock.level = lvl;
+
     Ok(())
 }
 /// Enables or disables terminal output of log messages.
@@ -214,9 +204,7 @@ pub fn set_print_to_terminal(val: bool) -> Result<(), SetPrintToTerminalError> {
         return Err(SetPrintToTerminalError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        cfg.print_to_terminal = val;
-    }
+    config_lock.print_to_terminal = val;
     Ok(())
 }
 /// Enables or disables colorized output of log messages.
@@ -228,9 +216,7 @@ pub fn set_colorized(val: bool) -> Result<(), SetColorizedError> {
         return Err(SetColorizedError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        cfg.colorized = val;
-    }
+    config_lock.colorized = val;
     Ok(())
 }
 
@@ -254,9 +240,9 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 /// use loggit::logger;
 /// use loggit::Level;
 ///
-/// fn main(){
-///     logger::set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
-/// }
+///
+/// logger::set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
+///
 /// ```
 pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
     let config_lock = get_write_config();
@@ -265,14 +251,12 @@ pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFo
         return Err(SetLevelFormattingError::UnableToLoadConfig);
     }
     let mut config_lock = config_lock.unwrap();
-    if let Some(ref mut cfg) = *config_lock {
-        match level {
-            Level::TRACE => cfg.trace_log_format = LogFormatter::parse_from_string(format)?,
-            Level::DEBUG => cfg.debug_log_format = LogFormatter::parse_from_string(format)?,
-            Level::INFO => cfg.info_log_format = LogFormatter::parse_from_string(format)?,
-            Level::WARN => cfg.warn_log_format = LogFormatter::parse_from_string(format)?,
-            Level::ERROR => cfg.error_log_format = LogFormatter::parse_from_string(format)?,
-        }
+    match level {
+        Level::TRACE => config_lock.trace_log_format = LogFormatter::parse_from_string(format)?,
+        Level::DEBUG => config_lock.debug_log_format = LogFormatter::parse_from_string(format)?,
+        Level::INFO => config_lock.info_log_format = LogFormatter::parse_from_string(format)?,
+        Level::WARN => config_lock.warn_log_format = LogFormatter::parse_from_string(format)?,
+        Level::ERROR => config_lock.error_log_format = LogFormatter::parse_from_string(format)?,
     }
     Ok(())
 }
@@ -313,7 +297,7 @@ fn write_file_log(log_info: &LogInfo) {
     let mut file_manager = get_file_manager().unwrap();
     let mess_to_print = string_log(log_info, false);
 
-    let res = file_manager.write_log(&mess_to_print, get_config());
+    let res = file_manager.write_log(&mess_to_print, get_config().clone());
     match res {
         Ok(_) => {}
         Err(e) => {
@@ -328,9 +312,7 @@ fn write_file_log(log_info: &LogInfo) {
     // config
     let w_conf = get_write_config();
     if let Some(mut temp_cfg) = w_conf {
-        if let Some(ref mut cfg) = *temp_cfg {
-            cfg.file_manager = Some(file_manager)
-        }
+        temp_cfg.file_manager = Some(file_manager)
     }
 }
 fn log_handler(log_info: LogInfo) {
@@ -453,7 +435,7 @@ macro_rules! error {
 /// Initializes the logger with default configuration settings.
 pub fn init() {
     let mut config = CONFIG.write().unwrap();
-    *config = Some(Config {
+    *config = Config {
         ..Default::default()
-    })
+    }
 }
