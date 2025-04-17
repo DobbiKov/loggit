@@ -109,7 +109,7 @@ impl From<FileName> for String {
         if let Some(num) = value.file_num {
             txt.push('(');
             txt.push_str(&num.to_string());
-            txt.push('}');
+            txt.push(')');
         };
         txt.push('.');
         txt.push_str(&value.file_extension);
