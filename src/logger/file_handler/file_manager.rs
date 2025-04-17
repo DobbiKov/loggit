@@ -1,7 +1,6 @@
 use std::{
     fs::File,
     io::{self, BufReader},
-    os::unix::fs::MetadataExt,
 };
 
 use chrono::Timelike;
@@ -255,7 +254,7 @@ impl FileManager {
                     e,
                 ));
             }
-            Ok(data) => data.size(),
+            Ok(data) => data.len(),
         };
         let mut last_idx: i32 = -1;
         // we need last_idx for: if we found not satsfying constraint, than we create a new file,
