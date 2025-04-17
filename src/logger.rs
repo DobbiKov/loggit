@@ -153,9 +153,9 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
 pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
     with_fm(|fm| {
         if fm.set_compression(ctype) {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(SetCompressionError::IncorrectCompressionValue);
+            Err(SetCompressionError::IncorrectCompressionValue)
         }
     })
 }
@@ -304,8 +304,9 @@ fn print_log(log_info: &LogInfo) {
 fn write_file_log(log_info: &LogInfo) {
     let mess_to_print = string_log(log_info, false);
 
+    let cfg_c = get_config().clone();
     let _ = with_fm::<(), AccessError, _>(|file_manager| {
-        let res = file_manager.write_log(&mess_to_print, get_config().clone());
+        let res = file_manager.write_log(&mess_to_print, cfg_c);
         match res {
             Ok(_) => Ok(()),
             Err(e) => {
