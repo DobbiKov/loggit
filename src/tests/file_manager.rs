@@ -1,6 +1,6 @@
 use crate::logger::file_handler::file_manager::{CompressFileError, FileManager};
-use crate::Config;
 use crate::Level;
+use crate::{logger, Config};
 use std::fs;
 use std::path::Path;
 
@@ -168,6 +168,9 @@ fn test_compress_file() {
         fm.set_compression("zip"),
         "Expected setting compression to succeed"
     );
+
+    assert!(logger::set_archive_dir("loggit_archives").is_ok());
+
     let comp_res = fm.compress_file(&file_name);
     assert!(comp_res.is_ok(), "Expected compress_file to succeed");
 
@@ -182,4 +185,36 @@ fn test_compress_file() {
     let _ = fs::remove_file(&file_name);
     let _ = fs::remove_file(&zip_file);
     let _ = fs::remove_dir_all("./loggit_archives/");
+}
+
+#[test]
+fn rotation_by_size_triggers_compression() {
+    // 1. Set up
+    let mut fm = FileManager::init_from_string("big_{date}_{time}.log", dummy_config()).unwrap();
+    fm.add_rotation("1 KB"); // rotate when > 1024 bytes
+    fm.set_compression("zip"); // enable compression
+    logger::set_archive_dir("loggit_archives").unwrap();
+
+    // 2. Create a starting file and write 1500 bytes (> 1 KB)
+    fm.create_new_file(&dummy_config()).unwrap();
+    let file_name = fm.get_file_name();
+    std::fs::write(&file_name, vec![0u8; 1500]).unwrap();
+
+    // 3. Write a log line – verify_constraints() will run inside
+    let outcome = fm.write_log("hello", dummy_config()).unwrap();
+    assert!(matches!(
+        outcome,
+        logger::file_handler::file_manager::VerifyConstraintsRes::NewFileCreated
+    ));
+
+    let archived = format!("loggit_archives/{}.zip", file_name);
+    assert!(
+        std::path::Path::new(&archived).exists(),
+        "expected {} to exist",
+        archived
+    );
+
+    // 4. Clean‑up
+    let _ = std::fs::remove_file(&archived);
+    let _ = std::fs::remove_dir_all("loggit_archives");
 }

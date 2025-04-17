@@ -54,7 +54,7 @@ impl LogColor {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum LogPart {
     Message,
     Time,
@@ -95,13 +95,13 @@ impl From<String> for LogPart {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct LogFormatWrapper {
     pub(crate) color: Option<LogColor>,
     pub(crate) part: LogPart,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct LogFormatter {
     pub(crate) parts: Vec<LogFormatWrapper>,
 }

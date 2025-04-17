@@ -1,4 +1,5 @@
 mod file_manager;
+mod from_env_file_config;
 use crate::Level;
 
 use crate::helper;
@@ -151,11 +152,18 @@ fn test_set_file_and_compression_and_rotation() {
 
     // Check that the internal config now includes a file_manager.
     let config_state = CONFIG.read().unwrap();
-    let cfg = config_state.as_ref().unwrap();
+    let cfg = config_state;
     assert!(cfg.file_manager.is_some());
 
     // Optionally, clean up any generated file if needed.
-    let file_name = cfg.file_manager.as_ref().unwrap().get_file_name();
+    let file_name = cfg
+        .file_manager
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .get_file_name();
+
     if fs::metadata(&file_name).is_ok() {
         let _ = fs::remove_file(file_name);
     }

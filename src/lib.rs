@@ -52,13 +52,14 @@
 
 use logger::{file_handler::file_manager::FileManager, formatter::LogFormatter};
 use once_cell::sync::Lazy;
-use std::{fmt::Display, sync::RwLock};
+use std::sync::{Arc, Mutex};
+use std::{fmt::Display, path::PathBuf, sync::RwLock};
 pub(crate) mod helper;
 
 #[cfg(test)]
 mod tests;
 
-#[derive(Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 /// Represents the log level used throughout the application.
 pub enum Level {
     TRACE,
@@ -79,7 +80,8 @@ struct Config {
     info_log_format: LogFormatter,
     warn_log_format: LogFormatter,
     error_log_format: LogFormatter,
-    file_manager: Option<FileManager>,
+    file_manager: Option<Arc<Mutex<FileManager>>>,
+    archive_dir: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -97,6 +99,7 @@ impl Default for Config {
             )
             .unwrap(),
             file_manager: None,
+            archive_dir: None,
         }
     }
 }
@@ -114,10 +117,10 @@ impl Display for Level {
     }
 }
 
-static CONFIG: Lazy<RwLock<Option<Config>>> = Lazy::new(|| {
-    RwLock::new(Some(Config {
+static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| {
+    RwLock::new(Config {
         ..Default::default()
-    }))
+    })
 });
 
 pub mod logger;
