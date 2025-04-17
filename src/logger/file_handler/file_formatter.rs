@@ -34,7 +34,10 @@ impl FileFormatter {
                 return Err(FileFormatterTryFromStringError::IncorrectCaracterGiven(ch));
             }
         }
-        let elems = crate::logger::formatter::parse_string_to_logparts(format).unwrap();
+        let elems = match crate::logger::formatter::parse_string_to_logparts(format) {
+            Ok(r) => r,
+            Err(_) => return Err(FileFormatterTryFromStringError::IncorrectFormatPartGiven),
+        };
         let last_elem = match elems.last() {
             None => return Err(FileFormatterTryFromStringError::EmptyStringGiven),
             Some(el) => el,
