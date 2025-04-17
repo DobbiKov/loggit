@@ -186,3 +186,35 @@ fn test_compress_file() {
     let _ = fs::remove_file(&zip_file);
     let _ = fs::remove_dir_all("./loggit_archives/");
 }
+
+#[test]
+fn rotation_by_size_triggers_compression() {
+    // 1. Set up
+    let mut fm = FileManager::init_from_string("big_{date}_{time}.log", dummy_config()).unwrap();
+    fm.add_rotation("1 KB"); // rotate when > 1024 bytes
+    fm.set_compression("zip"); // enable compression
+    logger::set_archive_dir("loggit_archives").unwrap();
+
+    // 2. Create a starting file and write 1500 bytes (> 1 KB)
+    fm.create_new_file(&dummy_config()).unwrap();
+    let file_name = fm.get_file_name();
+    std::fs::write(&file_name, vec![0u8; 1500]).unwrap();
+
+    // 3. Write a log line – verify_constraints() will run inside
+    let outcome = fm.write_log("hello", dummy_config()).unwrap();
+    assert!(matches!(
+        outcome,
+        logger::file_handler::file_manager::VerifyConstraintsRes::NewFileCreated
+    ));
+
+    let archived = format!("loggit_archives/{}.zip", file_name);
+    assert!(
+        std::path::Path::new(&archived).exists(),
+        "expected {} to exist",
+        archived
+    );
+
+    // 4. Clean‑up
+    let _ = std::fs::remove_file(&archived);
+    let _ = std::fs::remove_dir_all("loggit_archives");
+}

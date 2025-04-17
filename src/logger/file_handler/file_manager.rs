@@ -441,13 +441,13 @@ impl RotationType {
             //size
             let multiply_factor;
             if text.ends_with(" KB") {
-                multiply_factor = 1;
-            } else if text.ends_with(" MB") {
                 multiply_factor = 1024;
-            } else if text.ends_with(" GB") {
+            } else if text.ends_with(" MB") {
                 multiply_factor = 1024 * 1024;
-            } else if text.ends_with(" TB") {
+            } else if text.ends_with(" GB") {
                 multiply_factor = 1024 * 1024 * 1024;
+            } else if text.ends_with(" TB") {
+                multiply_factor = 1024 * 1024 * 1024 * 1024;
             } else {
                 multiply_factor = 1;
             }
