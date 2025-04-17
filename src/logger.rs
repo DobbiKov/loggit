@@ -126,6 +126,7 @@ pub fn set_file(format: &str) -> Result<(), SetFileError> {
     Ok(())
 }
 
+/// Sets a directory to save archives of used log files
 pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
