@@ -195,6 +195,15 @@ The default configuration already provides sensible defaults, so you can get sta
 
 Contributions and suggestions are welcome! Feel free to open issues or submit pull requests to help improve LogGit.
 
+## Testing
+There are two types of tests: 
+- unit tests that are stored in the `src/tests/` folder.
+- integration tests that are stored in the `tests/` folder.
+
+Using `cargo test` is not recommended as it runs tests using multiple threads that doesn't respect the library logic, thus the next scripts are recommended:
+- `test.sh` for unit tests
+- `int_test.sh` for integration tests
+
 ## Release notes
 In order to read release notes for each version, click [here](./RELEASE_NOTES.md)
 
