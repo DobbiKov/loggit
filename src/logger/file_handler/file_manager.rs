@@ -173,22 +173,7 @@ impl FileManager {
             }
         }
     }
-    fn get_path_to_compression_foler() -> String {
-        "./loggit_archives/".to_string()
-    }
 
-    /// Returns true if there's the directory to store archives to, false if there's no one and
-    /// creates it
-    pub(crate) fn verify_arichive_dir() -> Result<bool, std::io::Error> {
-        let folder_path = &archivation::archive_dir();
-        match std::path::Path::new(folder_path).exists() {
-            true => Ok(true),
-            _ => match std::fs::create_dir(folder_path) {
-                Ok(_) => Ok(true),
-                Err(e) => Err(e),
-            },
-        }
-    }
     /// compresses a file by the given path in a zip archive
     fn compress_zip(&self, path: &str) -> Result<(), CompressFileError> {
         if let Err(e) = archivation::ensure_archive_dir() {
@@ -217,7 +202,7 @@ impl FileManager {
     /// Compresses a file by the given path depending on the set compression algortithm in the
     /// config
     pub(crate) fn compress_file(&self, path: &str) -> Result<(), CompressFileError> {
-        if let Err(e) = FileManager::verify_arichive_dir() {
+        if let Err(e) = archivation::ensure_archive_dir() {
             return Err(CompressFileError::InaccessibleArchivationDirectory(e));
         }
         if let Some(compr_t) = &self.file_constraints.compression {

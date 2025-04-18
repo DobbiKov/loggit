@@ -129,6 +129,7 @@ pub fn set_file(format: &str) -> Result<(), SetFileError> {
     Ok(())
 }
 
+/// Sets a directory to save archives of used log files
 pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -156,9 +157,9 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
 pub fn set_compression(ctype: &str) -> Result<(), SetCompressionError> {
     with_fm(|fm| {
         if fm.set_compression(ctype) {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(SetCompressionError::IncorrectCompressionValue);
+            Err(SetCompressionError::IncorrectCompressionValue)
         }
     })
 }
@@ -309,7 +310,9 @@ fn write_file_log(log_info: &LogInfo) {
     let cfg_snapshot = get_config().clone();
 
     let _ = with_fm::<(), AccessError, _>(|file_manager| {
+      
         let res = file_manager.write_log(&mess_to_print, cfg_snapshot);
+      
         match res {
             Ok(_) => Ok(()),
             Err(e) => {
