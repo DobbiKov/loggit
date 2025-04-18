@@ -42,13 +42,16 @@ where
     F: FnOnce(&mut FileManager) -> Result<T, E>,
     E: From<AccessError>,
 {
-    let cfg_lock = CONFIG.write().map_err(|_| AccessError::LoadConfig)?;
-    let fm_arc = cfg_lock
-        .file_manager
-        .as_ref()
-        .ok_or(AccessError::FileNotSet)?;
+    let fm_arc = {
+        let cfg_lock = CONFIG.read().map_err(|_| AccessError::LoadConfig)?;
+        cfg_lock
+            .file_manager
+            .as_ref()
+            .ok_or(AccessError::FileNotSet)?
+            .clone()
+    };
     let mut guard = fm_arc.lock().unwrap(); // poisoned = panic, fine for logger
-    f(&mut *guard)
+    f(&mut guard)
 }
 
 // -- Getter functions for config --
@@ -303,9 +306,10 @@ fn print_log(log_info: &LogInfo) {
 }
 fn write_file_log(log_info: &LogInfo) {
     let mess_to_print = string_log(log_info, false);
+    let cfg_snapshot = get_config().clone();
 
     let _ = with_fm::<(), AccessError, _>(|file_manager| {
-        let res = file_manager.write_log(&mess_to_print, get_config().clone());
+        let res = file_manager.write_log(&mess_to_print, cfg_snapshot);
         match res {
             Ok(_) => Ok(()),
             Err(e) => {
