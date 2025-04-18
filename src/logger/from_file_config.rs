@@ -36,6 +36,9 @@ pub enum ReadFromConfigFileError {
 
     #[error("failed to add rotation: {0}")]
     AddRotation(#[from] logger::set_errors::AddRotationError),
+
+    #[error("failed to set archive dir: {0}")]
+    SetArchiveDirError(#[from] logger::set_errors::SetArchiveDirError),
 }
 
 pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
@@ -107,6 +110,9 @@ pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
     }
     if let Some(v) = vars_r.get("compression") {
         logger::set_compression(v)?;
+    }
+    if let Some(v) = vars_r.get("archive_dir") {
+        logger::set_archive_dir(v)?;
     }
     if let Some(v) = vars_r.get("rotations") {
         if !v.contains(',') {
