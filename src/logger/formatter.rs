@@ -11,16 +11,16 @@ pub(crate) enum LogColor {
     Purple,
 }
 
-impl From<String> for LogColor {
-    fn from(value: String) -> Self {
+impl From<&str> for LogColor {
+    fn from(value: &str) -> Self {
         match value {
-            val if val == *"red" => LogColor::Red,
-            val if val == *"green" => LogColor::Green,
-            val if val == *"blue" => LogColor::Blue,
-            val if val == *"yellow" => LogColor::Yellow,
-            val if val == *"black" => LogColor::Black,
-            val if val == *"white" => LogColor::White,
-            val if val == *"purple" => LogColor::Purple,
+            "red" => LogColor::Red,
+            "green" => LogColor::Green,
+            "blue" => LogColor::Blue,
+            "yellow" => LogColor::Yellow,
+            "black" => LogColor::Black,
+            "white" => LogColor::White,
+            "purple" => LogColor::Purple,
             _ => {
                 eprintln!("Incorrect color given!");
                 LogColor::White
@@ -28,15 +28,17 @@ impl From<String> for LogColor {
         }
     }
 }
+impl From<String> for LogColor {
+    fn from(value: String) -> Self {
+        value.as_str().into()
+    }
+}
 
 impl LogColor {
-    fn get_colors_str() -> Vec<String> {
-        vec!["red", "green", "blue", "yellow", "black", "white", "purple"]
-            .into_iter()
-            .map(|x| x.to_string())
-            .collect()
+    fn get_colors_str() -> [&'static str; 7] {
+        ["red", "green", "blue", "yellow", "black", "white", "purple"]
     }
-    pub(crate) fn get_ascii(&self) -> String {
+    pub(crate) fn get_ascii(&self) -> &'static str {
         match self {
             LogColor::Red => "\x1b[38;2;255;0;0m",       // #FF0000
             LogColor::Green => "\x1b[38;2;0;255;0m",     // #00FF00
@@ -46,7 +48,6 @@ impl LogColor {
             LogColor::White => "\x1b[38;2;255;255;255m", // #FFFFFF
             LogColor::Purple => "\x1b[38;2;128;0;128m",  // #800080
         }
-        .to_string()
     }
 
     pub(crate) fn colorize_str(text: &str, color: LogColor) -> String {
@@ -67,31 +68,33 @@ pub(crate) enum LogPart {
 }
 
 impl LogPart {
-    fn get_parts_str() -> Vec<String> {
-        vec![
+    fn get_parts_str() -> [&'static str; 9] {
+        [
             "message", "time", "date", "file", "line", "date", "level", "text", "module",
         ]
-        .into_iter()
-        .map(|x| x.to_string())
-        .collect()
     }
 }
 
-impl From<String> for LogPart {
-    fn from(value: String) -> Self {
+impl From<&str> for LogPart {
+    fn from(value: &str) -> Self {
         match value {
-            val if val == *"message" => LogPart::Message,
-            val if val == *"time" => LogPart::Time,
-            val if val == *"date" => LogPart::Date,
-            val if val == *"file" => LogPart::File,
-            val if val == *"line" => LogPart::Line,
-            val if val == *"level" => LogPart::Level,
-            val if val == *"module" => LogPart::ModulePath,
+            "message" => LogPart::Message,
+            "time" => LogPart::Time,
+            "date" => LogPart::Date,
+            "file" => LogPart::File,
+            "line" => LogPart::Line,
+            "level" => LogPart::Level,
+            "module" => LogPart::ModulePath,
             _ => {
                 eprintln!("Incorrect part given!");
                 LogPart::Text(String::new())
             }
         }
+    }
+}
+impl From<String> for LogPart {
+    fn from(value: String) -> Self {
+        value.as_str().into()
     }
 }
 
@@ -184,8 +187,8 @@ impl ParseParts {
     //verify if the text in block and color is correct
     fn verify_color_block_integriy(&self) -> bool {
         match self {
-            ParseParts::Color(text) => LogColor::get_colors_str().contains(text),
-            ParseParts::BracketBlock(text) => LogPart::get_parts_str().contains(text),
+            ParseParts::Color(text) => LogColor::get_colors_str().contains(&text.as_str()),
+            ParseParts::BracketBlock(text) => LogPart::get_parts_str().contains(&text.as_str()),
             _ => true,
         }
     }
