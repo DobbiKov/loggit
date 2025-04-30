@@ -5,6 +5,8 @@ use crate::Level;
 
 use crate::logger;
 use env_file_reader;
+use serde::Deserialize;
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -126,6 +128,23 @@ pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
     }
 
     Ok(())
+}
+#[derive(Serialize, Deserialize)]
+struct ConfigForSerde {
+    enabled: Option<bool>,
+    level: Option<String>,
+    print_to_terminal: Option<bool>,
+    colorized: Option<bool>,
+    trace_log_formatting: Option<String>,
+    debug_log_formatting: Option<String>,
+    info_log_formatting: Option<String>,
+    warn_log_formatting: Option<String>,
+    error_log_formatting: Option<String>,
+
+    file_name: Option<String>,
+    compression: Option<String>,
+    rotations: Option<Vec<String>>,
+    archive_dir: Option<String>,
 }
 
 fn read_from_json_file(path: &str) {}
