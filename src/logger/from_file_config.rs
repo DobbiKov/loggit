@@ -129,22 +129,106 @@ pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
 
     Ok(())
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 struct ConfigForSerde {
     enabled: Option<bool>,
     level: Option<String>,
     print_to_terminal: Option<bool>,
     colorized: Option<bool>,
-    trace_log_formatting: Option<String>,
-    debug_log_formatting: Option<String>,
-    info_log_formatting: Option<String>,
-    warn_log_formatting: Option<String>,
-    error_log_formatting: Option<String>,
+    global_formatting: Option<String>,
+    trace_formatting: Option<String>,
+    debug_formatting: Option<String>,
+    info_formatting: Option<String>,
+    warn_formatting: Option<String>,
+    error_formatting: Option<String>,
 
     file_name: Option<String>,
     compression: Option<String>,
     rotations: Option<Vec<String>>,
     archive_dir: Option<String>,
+}
+
+fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
+    let mut res_conf: ConfigForSerde = Default::default();
+
+    let vars_r = match env_file_reader::read_file(path) {
+        Ok(f) => f,
+        Err(e) => {
+            return Err(ReadFromConfigFileError::ReadFileError(e));
+        }
+    };
+
+    //enabled
+    match vars_r.get("enabled") {
+        None => {}
+        Some(v) => match v.as_str() {
+            "true" => res_conf.enabled = Some(true),
+            "false" => res_conf.enabled = Some(false),
+            _ => return Err(ReadFromConfigFileError::IncorrectValue),
+        },
+    };
+
+    if let Some(v) = vars_r.get("level") {
+        res_conf.level = Some(v.to_owned())
+    }
+
+    if let Some(v) = vars_r.get("print_to_terminal") {
+        match v.as_str() {
+            "true" => res_conf.print_to_terminal = Some(true),
+            "false" => res_conf.print_to_terminal = Some(false),
+            _ => return Err(ReadFromConfigFileError::IncorrectValue),
+        };
+    };
+
+    if let Some(v) = vars_r.get("colorized") {
+        match v.as_str() {
+            "true" => res_conf.print_to_terminal = Some(true),
+            "false" => res_conf.print_to_terminal = Some(false),
+            _ => return Err(ReadFromConfigFileError::IncorrectValue),
+        };
+    };
+
+    if let Some(v) = vars_r.get("global_formatting") {
+        res_conf.global_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("trace_formatting") {
+        res_conf.trace_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("debug_formatting") {
+        res_conf.debug_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("info_formatting") {
+        res_conf.info_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("warn_formatting") {
+        res_conf.warn_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("error_formatting") {
+        res_conf.error_formatting = Some(v.to_owned());
+    }
+
+    if let Some(v) = vars_r.get("file") {
+        res_conf.file_name = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("compression") {
+        res_conf.compression = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("archive_dir") {
+        res_conf.archive_dir = Some(v.to_owned());
+    }
+    if let Some(v) = vars_r.get("rotations") {
+        let mut rots = Vec::<String>::new();
+        if !v.contains(',') {
+            rots.push(v.to_owned());
+        } else {
+            let rotations = v.split(',');
+            for rot in rotations {
+                rots.push(rot.to_string());
+            }
+        }
+        res_conf.rotations = Some(rots);
+    }
+    Ok(res_conf)
 }
 
 fn read_from_json_file(path: &str) {}
