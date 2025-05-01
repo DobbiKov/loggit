@@ -43,6 +43,12 @@ pub enum ReadFromConfigFileError {
     SetArchiveDirError(#[from] logger::set_errors::SetArchiveDirError),
 }
 
+#[derive(Debug, Error)]
+pub enum ParseConfigError {
+    #[error("incorrect value given")]
+    IncorrectValue,
+}
+
 pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
     let vars_r = match env_file_reader::read_file(path) {
         Ok(f) => f,
@@ -131,8 +137,27 @@ pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
 }
 #[derive(Serialize, Deserialize, Default)]
 struct ConfigForSerde {
-    enabled: Option<bool>,
+    enabled: Option<String>,
     level: Option<String>,
+    print_to_terminal: Option<String>,
+    colorized: Option<String>,
+    global_formatting: Option<String>,
+    trace_formatting: Option<String>,
+    debug_formatting: Option<String>,
+    info_formatting: Option<String>,
+    warn_formatting: Option<String>,
+    error_formatting: Option<String>,
+
+    file_name: Option<String>,
+    compression: Option<String>,
+    rotations: Option<Vec<String>>,
+    archive_dir: Option<String>,
+}
+
+#[derive(Default)]
+struct InterConfig {
+    enabled: Option<bool>,
+    level: Option<Level>,
     print_to_terminal: Option<bool>,
     colorized: Option<bool>,
     global_formatting: Option<String>,
@@ -148,6 +173,84 @@ struct ConfigForSerde {
     archive_dir: Option<String>,
 }
 
+impl TryFrom<ConfigForSerde> for InterConfig {
+    // TODO: parse to real config
+    type Error = ParseConfigError;
+
+    fn try_from(value: ConfigForSerde) -> Result<Self, Self::Error> {
+        let mut res_conf: InterConfig = Default::default();
+        //enabled
+        match value.enabled {
+            None => {}
+            Some(v) => match v.as_str() {
+                "true" => res_conf.enabled = Some(true),
+                "false" => res_conf.enabled = Some(false),
+                _ => return Err(ParseConfigError::IncorrectValue),
+            },
+        };
+
+        if let Some(v) = value.level {
+            match v.to_lowercase().as_str() {
+                "trace" => res_conf.level = Some(Level::TRACE),
+                "debug" => res_conf.level = Some(Level::DEBUG),
+                "info" => res_conf.level = Some(Level::INFO),
+                "warn" => res_conf.level = Some(Level::WARN),
+                "error" => res_conf.level = Some(Level::ERROR),
+                _ => return Err(ParseConfigError::IncorrectValue),
+            };
+        }
+
+        if let Some(v) = value.print_to_terminal {
+            match v.as_str() {
+                "true" => res_conf.print_to_terminal = Some(true),
+                "false" => res_conf.print_to_terminal = Some(false),
+                _ => return Err(ParseConfigError::IncorrectValue),
+            };
+        };
+
+        if let Some(v) = value.colorized {
+            match v.as_str() {
+                "true" => res_conf.colorized = Some(true),
+                "false" => res_conf.colorized = Some(false),
+                _ => return Err(ParseConfigError::IncorrectValue),
+            };
+        };
+
+        if let Some(v) = value.global_formatting {
+            res_conf.global_formatting = Some(v);
+        }
+        if let Some(v) = value.trace_formatting {
+            res_conf.trace_formatting = Some(v);
+        }
+        if let Some(v) = value.debug_formatting {
+            res_conf.debug_formatting = Some(v);
+        }
+        if let Some(v) = value.info_formatting {
+            res_conf.info_formatting = Some(v);
+        }
+        if let Some(v) = value.warn_formatting {
+            res_conf.warn_formatting = Some(v);
+        }
+        if let Some(v) = value.error_formatting {
+            res_conf.error_formatting = Some(v);
+        }
+
+        if let Some(v) = value.file_name {
+            res_conf.file_name = Some(v);
+        }
+        if let Some(v) = value.compression {
+            res_conf.compression = Some(v);
+        }
+        if let Some(v) = value.archive_dir {
+            res_conf.archive_dir = Some(v);
+        }
+        if let Some(v) = value.rotations {
+            res_conf.rotations = Some(v)
+        }
+        Ok(res_conf)
+    }
+}
+
 fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
     let mut res_conf: ConfigForSerde = Default::default();
 
@@ -161,11 +264,9 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
     //enabled
     match vars_r.get("enabled") {
         None => {}
-        Some(v) => match v.as_str() {
-            "true" => res_conf.enabled = Some(true),
-            "false" => res_conf.enabled = Some(false),
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        },
+        Some(v) => {
+            res_conf.enabled = Some(v.to_owned());
+        }
     };
 
     if let Some(v) = vars_r.get("level") {
@@ -173,19 +274,11 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
     }
 
     if let Some(v) = vars_r.get("print_to_terminal") {
-        match v.as_str() {
-            "true" => res_conf.print_to_terminal = Some(true),
-            "false" => res_conf.print_to_terminal = Some(false),
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        };
+        res_conf.print_to_terminal = Some(v.to_owned());
     };
 
     if let Some(v) = vars_r.get("colorized") {
-        match v.as_str() {
-            "true" => res_conf.print_to_terminal = Some(true),
-            "false" => res_conf.print_to_terminal = Some(false),
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        };
+        res_conf.colorized = Some(v.to_owned());
     };
 
     if let Some(v) = vars_r.get("global_formatting") {
