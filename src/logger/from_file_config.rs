@@ -173,8 +173,74 @@ struct InterConfig {
     archive_dir: Option<String>,
 }
 
+impl InterConfig {
+    /// Apply all of the settings that were present in the parsed config.
+    /// If `enabled` is Some(false), returns Err(DisabledToBeUsed) immediately.
+    fn apply(self) -> Result<(), ReadFromConfigFileError> {
+        // Honor the `enabled` flag
+        if let Some(enabled) = self.enabled {
+            if !enabled {
+                return Err(ReadFromConfigFileError::DisabledToBeUsed);
+            }
+        }
+
+        // Log level
+        if let Some(level) = self.level {
+            logger::set_log_level(level)?;
+        }
+
+        // Terminal output
+        if let Some(to_term) = self.print_to_terminal {
+            logger::set_print_to_terminal(to_term)?;
+        }
+
+        // Colorized output
+        if let Some(col) = self.colorized {
+            logger::set_colorized(col)?;
+        }
+
+        // Formatting
+        if let Some(fmt) = self.global_formatting {
+            logger::set_global_formatting(&fmt)?;
+        }
+        if let Some(fmt) = self.trace_formatting {
+            logger::set_level_formatting(Level::TRACE, &fmt)?;
+        }
+        if let Some(fmt) = self.debug_formatting {
+            logger::set_level_formatting(Level::DEBUG, &fmt)?;
+        }
+        if let Some(fmt) = self.info_formatting {
+            logger::set_level_formatting(Level::INFO, &fmt)?;
+        }
+        if let Some(fmt) = self.warn_formatting {
+            logger::set_level_formatting(Level::WARN, &fmt)?;
+        }
+        if let Some(fmt) = self.error_formatting {
+            logger::set_level_formatting(Level::ERROR, &fmt)?;
+        }
+
+        // File output
+        if let Some(pattern) = self.file_name {
+            logger::set_file(&pattern)?;
+        }
+        if let Some(comp) = self.compression {
+            logger::set_compression(&comp)?;
+        }
+        if let Some(dir) = self.archive_dir {
+            // we ignore the returned PathBuf here
+            let _ = logger::set_archive_dir(&dir)?;
+        }
+        if let Some(rotations) = self.rotations {
+            for rot in rotations {
+                logger::add_rotation(&rot)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl TryFrom<ConfigForSerde> for InterConfig {
-    // TODO: parse to real config
     type Error = ParseConfigError;
 
     fn try_from(value: ConfigForSerde) -> Result<Self, Self::Error> {
