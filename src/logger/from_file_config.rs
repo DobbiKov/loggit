@@ -1,6 +1,8 @@
 // this module aims to provide a feature of setting the config up from a file (without explicitely
 // precising it in the file (but make it still possible))
 
+use std::io::Read;
+
 use crate::Level;
 
 use crate::logger;
@@ -13,6 +15,8 @@ use thiserror::Error;
 pub enum ReadFromConfigFileError {
     #[error("couldn't open the config file to read: {0}")]
     ReadFileError(std::io::Error),
+    #[error("parse error: {0}")]
+    ParseError(String),
     #[error("this config file is disabled to be used")]
     DisabledToBeUsed,
     #[error("incorrect value given")]
@@ -388,6 +392,19 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
         res_conf.rotations = Some(rots);
     }
     Ok(res_conf)
+}
+
+fn parse_config_from_json_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
+    let mut file =
+        std::fs::File::open(path).map_err(|e| ReadFromConfigFileError::ReadFileError(e))?;
+    let mut contents = String::new();
+    let read_res = file
+        .read_to_string(&mut contents)
+        .map_err(|e| ReadFromConfigFileError::ReadFileError(e))?;
+
+    let cfg: ConfigForSerde = serde_json::from_str::<ConfigForSerde>(&contents)
+        .map_err(|e| ReadFromConfigFileError::ParseError(e.to_string()))?;
+    Ok(cfg)
 }
 
 fn read_from_json_file(path: &str) {}
