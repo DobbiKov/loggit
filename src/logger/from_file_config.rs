@@ -1,12 +1,14 @@
 // this module aims to provide a feature of setting the config up from a file (without explicitely
 // precising it in the file (but make it still possible))
 
+use std::error::Error;
 use std::io::Read;
 
 use crate::Level;
 
 use crate::logger;
 use env_file_reader;
+use ini::Ini;
 use serde::Deserialize;
 use serde::Serialize;
 use thiserror::Error;
@@ -139,8 +141,9 @@ pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
 
     Ok(())
 }
-#[derive(Serialize, Deserialize, Default)]
-struct ConfigForSerde {
+// temp pub
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct ConfigForSerde {
     enabled: Option<String>,
     level: Option<String>,
     print_to_terminal: Option<String>,
@@ -405,6 +408,93 @@ fn parse_config_from_json_file(path: &str) -> Result<ConfigForSerde, ReadFromCon
     let cfg: ConfigForSerde = serde_json::from_str::<ConfigForSerde>(&contents)
         .map_err(|e| ReadFromConfigFileError::ParseError(e.to_string()))?;
     Ok(cfg)
+}
+
+// temp pub
+pub fn parse_config_from_ini_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
+    let mut res_conf: ConfigForSerde = Default::default();
+    let conf = match Ini::load_from_file(path) {
+        Err(e) => {
+            return match e {
+                ini::Error::Io(error) => Err(ReadFromConfigFileError::ReadFileError(error)),
+                ini::Error::Parse(parse_error) => {
+                    Err(ReadFromConfigFileError::ParseError(parse_error.to_string()))
+                }
+            }
+        }
+        Ok(r) => r,
+    };
+    // TODO
+    let section = match conf.section(Some("Config")) {
+        None => {
+            return Err(ReadFromConfigFileError::ParseError(
+                "couldn't find Config section in the provided ini file".to_string(),
+            ))
+        }
+        Some(r) => r,
+    };
+
+    //enabled
+    match section.get("enabled") {
+        None => {}
+        Some(v) => {
+            res_conf.enabled = Some(v.to_owned());
+        }
+    };
+
+    if let Some(v) = section.get("level") {
+        res_conf.level = Some(v.to_owned())
+    }
+
+    if let Some(v) = section.get("print_to_terminal") {
+        res_conf.print_to_terminal = Some(v.to_owned());
+    };
+
+    if let Some(v) = section.get("colorized") {
+        res_conf.colorized = Some(v.to_owned());
+    };
+
+    if let Some(v) = section.get("global_formatting") {
+        res_conf.global_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("trace_formatting") {
+        res_conf.trace_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("debug_formatting") {
+        res_conf.debug_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("info_formatting") {
+        res_conf.info_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("warn_formatting") {
+        res_conf.warn_formatting = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("error_formatting") {
+        res_conf.error_formatting = Some(v.to_owned());
+    }
+
+    if let Some(v) = section.get("file") {
+        res_conf.file_name = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("compression") {
+        res_conf.compression = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("archive_dir") {
+        res_conf.archive_dir = Some(v.to_owned());
+    }
+    if let Some(v) = section.get("rotations") {
+        let mut rots = Vec::<String>::new();
+        if !v.contains(',') {
+            rots.push(v.to_owned());
+        } else {
+            let rotations = v.split(',');
+            for rot in rotations {
+                rots.push(rot.to_string());
+            }
+        }
+        res_conf.rotations = Some(rots);
+    }
+    Ok(res_conf)
 }
 
 fn read_from_json_file(path: &str) {}
