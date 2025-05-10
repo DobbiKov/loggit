@@ -8,6 +8,7 @@
 use archivation::ensure_archive_dir;
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
+use from_file_config::ReadFromConfigFileError;
 use set_errors::{
     AccessError, AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError,
     SetFileError, SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
@@ -144,6 +145,56 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
     config_lock.archive_dir = Some(path.clone());
 
     Ok(path)
+}
+
+/// ### Loads config from the given file
+///
+/// #### Supported file extensions:
+/// - *ini*
+/// - *json*
+/// - *env*
+///
+/// #### Allowed fields in each file:
+/// ```env
+///     enabled: bool
+///     level: str
+///     print_to_terminal: bool
+///     colorized: bool
+///     global_formatting: str
+///     trace_formatting
+///     debug_formatting
+///     info_formatting
+///     warn_formatting
+///     error_formatting
+///
+///     file_name: str
+///     compression: str
+///     rotations: arr[str]
+///     archive_dir: str
+///
+/// ```
+///
+/// > Note: For the ini files, the config must be in the `[Config]` sections
+///
+pub fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
+    let curr_conf = get_config().clone();
+
+    match crate::logger::from_file_config::load_config_from_file(path) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            let wc = get_write_config(); // if we failed at
+                                         // some point to
+                                         // write a config
+                                         // from file, we set
+                                         // the last actual
+                                         // config
+            if wc.is_some() {
+                let mut wc_c = wc.unwrap();
+                *wc_c = curr_conf;
+            }
+            Err(e)
+        }
+    }
 }
 
 ///Enables file compression for log archival.
@@ -310,9 +361,8 @@ fn write_file_log(log_info: &LogInfo) {
     let cfg_snapshot = get_config().clone();
 
     let _ = with_fm::<(), AccessError, _>(|file_manager| {
-      
         let res = file_manager.write_log(&mess_to_print, cfg_snapshot);
-      
+
         match res {
             Ok(_) => Ok(()),
             Err(e) => {
