@@ -156,26 +156,60 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
 ///
 /// #### Allowed fields in each file:
 /// ```env
-///     enabled: bool
-///     level: str
-///     print_to_terminal: bool
-///     colorized: bool
-///     global_formatting: str
-///     trace_formatting
-///     debug_formatting
-///     info_formatting
-///     warn_formatting
-///     error_formatting
+/// enabled: bool
+/// level: str
+/// print_to_terminal: bool
+/// colorized: bool
+/// global_formatting: str
+/// trace_formatting
+/// debug_formatting
+/// info_formatting
+/// warn_formatting
+/// error_formatting
 ///
-///     file_name: str
-///     compression: str
-///     rotations: arr[str]
-///     archive_dir: str
-///
+/// file_name: str
+/// compression: str
+/// rotations: arr[str]
+/// archive_dir: str
 /// ```
 ///
 /// > Note: For the ini files, the config must be in the `[Config]` sections
 ///
+/// **Example for an `ini` file:**
+/// ```ini
+/// [Config]
+/// colorized=true
+/// global_formatting="{file}-{line}-{module}<red> it seem to work<red> {level}: {message}"
+/// warn_formatting = "{file}-{line}-{module}<red>WARN!<red> {message}"
+/// file=app_{date}_{time}.txt
+/// rotations="1 day, 12:30"
+/// archive_dir="archives_loggit"
+/// ```
+///
+/// **Example for a `json` file:**
+/// ```json
+/// {
+///     "colorized": "true",
+///     "global_formatting": "<blue>{message}<blue> --- {level}",
+///     "file_name": "app_{time}.txt",
+///     "rotations": [
+///         "1 day",
+///         "12:30",
+///         "10 MB"
+///     ]
+/// }
+/// ```
+/// > Note: in a json file you must pass an array of string for rotations (not as in other files
+/// > where you pass it with ',' (coma))
+///
+/// **Example for a `env` file:**
+/// ```env
+/// colorized=true
+/// global_formatting="{file}-{line}-{module}<red>blyaaaa<red> {level}: {message}"
+/// file="ok_test_app_{date}_{time}.txt"
+/// rotations="1 day"
+/// archive_dir="archives_loggit"
+/// ```
 pub fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
     let curr_conf = get_config().clone();
 
