@@ -17,6 +17,10 @@ use thiserror::Error;
 pub enum ReadFromConfigFileError {
     #[error("couldn't open the config file to read: {0}")]
     ReadFileError(std::io::Error),
+    #[error("incorrect file name")]
+    IncorrectFileName,
+    #[error("incorrect file extension")]
+    IncorrectFileExtension,
     #[error("parse error: {0}")]
     ParseError(String),
     #[error("this config file is disabled to be used")]
@@ -55,95 +59,9 @@ pub enum ParseConfigError {
     IncorrectValue,
 }
 
-pub fn read_from_env_file(path: &str) -> Result<(), ReadFromConfigFileError> {
-    let vars_r = match env_file_reader::read_file(path) {
-        Ok(f) => f,
-        Err(e) => {
-            return Err(ReadFromConfigFileError::ReadFileError(e));
-        }
-    };
-
-    //enabled
-    match vars_r.get("enabled") {
-        None => {}
-        Some(v) => match v.as_str() {
-            "true" => {}
-            "false" => return Err(ReadFromConfigFileError::DisabledToBeUsed),
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        },
-    };
-
-    if let Some(v) = vars_r.get("level") {
-        match v.to_lowercase().as_str() {
-            "trace" => logger::set_log_level(Level::TRACE)?,
-            "debug" => logger::set_log_level(Level::DEBUG)?,
-            "info" => logger::set_log_level(Level::INFO)?,
-            "warn" => logger::set_log_level(Level::WARN)?,
-            "error" => logger::set_log_level(Level::ERROR)?,
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        };
-    }
-
-    if let Some(v) = vars_r.get("print_to_terminal") {
-        match v.as_str() {
-            "true" => logger::set_print_to_terminal(true)?,
-            "false" => logger::set_print_to_terminal(false)?,
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        };
-    };
-
-    if let Some(v) = vars_r.get("colorized") {
-        match v.as_str() {
-            "true" => logger::set_colorized(true)?,
-            "false" => logger::set_colorized(false)?,
-            _ => return Err(ReadFromConfigFileError::IncorrectValue),
-        };
-    };
-
-    if let Some(v) = vars_r.get("global_formatting") {
-        logger::set_global_formatting(v)?;
-    }
-    if let Some(v) = vars_r.get("trace_formatting") {
-        logger::set_level_formatting(Level::TRACE, v)?;
-    }
-    if let Some(v) = vars_r.get("debug_formatting") {
-        logger::set_level_formatting(Level::DEBUG, v)?;
-    }
-    if let Some(v) = vars_r.get("info_formatting") {
-        logger::set_level_formatting(Level::INFO, v)?;
-    }
-    if let Some(v) = vars_r.get("warn_formatting") {
-        logger::set_level_formatting(Level::WARN, v)?;
-    }
-    if let Some(v) = vars_r.get("error_formatting") {
-        logger::set_level_formatting(Level::ERROR, v)?;
-    }
-
-    if let Some(v) = vars_r.get("file") {
-        logger::set_file(v)?;
-    }
-    if let Some(v) = vars_r.get("compression") {
-        logger::set_compression(v)?;
-    }
-    if let Some(v) = vars_r.get("archive_dir") {
-        logger::set_archive_dir(v)?;
-    }
-    if let Some(v) = vars_r.get("rotations") {
-        if !v.contains(',') {
-            logger::add_rotation(v)?;
-        } else {
-            let rotations = v.split(',');
-            for rot in rotations {
-                logger::add_rotation(rot)?;
-            }
-        }
-    }
-
-    Ok(())
-}
 // temp pub
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct ConfigForSerde {
+struct ConfigForSerde {
     enabled: Option<String>,
     level: Option<String>,
     print_to_terminal: Option<String>,
@@ -411,7 +329,7 @@ fn parse_config_from_json_file(path: &str) -> Result<ConfigForSerde, ReadFromCon
 }
 
 // temp pub
-pub fn parse_config_from_ini_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
+fn parse_config_from_ini_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
     let mut res_conf: ConfigForSerde = Default::default();
     let conf = match Ini::load_from_file(path) {
         Err(e) => {
@@ -495,6 +413,38 @@ pub fn parse_config_from_ini_file(path: &str) -> Result<ConfigForSerde, ReadFrom
         res_conf.rotations = Some(rots);
     }
     Ok(res_conf)
+}
+
+fn parse_config_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
+    if !path.contains(".") {
+        return Err(ReadFromConfigFileError::IncorrectFileName);
+    }
+
+    let ext = match path.split(".").last() {
+        None => return Err(ReadFromConfigFileError::IncorrectFileName),
+        Some(r) => r,
+    };
+
+    let res = match ext {
+        "ini" => parse_config_from_ini_file(path),
+        "json" => parse_config_from_json_file(path),
+        "env" => parse_config_from_env_file(path),
+        _ => Err(ReadFromConfigFileError::IncorrectFileExtension),
+    };
+    res
+}
+
+fn parse_inter_config_from_serde_config(
+    s_conf: ConfigForSerde,
+) -> Result<InterConfig, ParseConfigError> {
+    s_conf.try_into()
+}
+
+pub fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
+    let parse_conf = parse_config_file(path)?;
+    let inter_conf = parse_inter_config_from_serde_config(parse_conf)
+        .map_err(|e| ReadFromConfigFileError::ParseError(e.to_string()))?;
+    inter_conf.apply()
 }
 
 fn read_from_json_file(path: &str) {}
