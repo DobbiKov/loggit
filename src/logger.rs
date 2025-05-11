@@ -5,9 +5,9 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
-use archivation::ensure_archive_dir;
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
+use set_errors::ReadFromConfigFileError;
 use set_errors::{
     AccessError, AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError,
     SetFileError, SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
@@ -146,6 +146,93 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
     Ok(path)
 }
 
+/// ### Loads config from the given file
+///
+/// #### Supported file extensions:
+/// - *ini*
+/// - *json*
+/// - *env*
+///
+/// #### Allowed fields in each file:
+/// ```env
+/// enabled: bool
+/// level: str
+/// print_to_terminal: bool
+/// colorized: bool
+/// global_formatting: str
+/// trace_formatting: str
+/// debug_formatting: str
+/// info_formatting: str
+/// warn_formatting: str
+/// error_formatting: str
+///
+/// file_name: str
+/// compression: str
+/// rotations: arr[str]
+/// archive_dir: str
+/// ```
+/// > Note: For the `ini` and `env` files, for rotations you should write a single string with ','
+/// > divisor, example:
+/// ```
+/// rotations = "1 week, 12 MB, 12:30"
+/// ```
+/// > Note: For the ini files, the config must be in the `[Config]` sections
+///
+/// **Example for an `ini` file:**
+/// ```ini
+/// [Config]
+/// colorized=true
+/// global_formatting="{file}-{line}-{module}<red> it seem to work<red> {level}: {message}"
+/// warn_formatting = "{file}-{line}-{module}<red>WARN!<red> {message}"
+/// file=app_{date}_{time}.txt rotations="1 day, 12:30"
+/// archive_dir="archives_loggit"
+/// ```
+///
+/// **Example for a `json` file:**
+/// ```json
+/// {
+///     "colorized": "true",
+///     "global_formatting": "<blue>{message}<blue> --- {level}",
+///     "file_name": "app_{time}.txt",
+///     "rotations": [
+///         "1 day",
+///         "12:30",
+///         "10 MB"
+///     ]
+/// }
+/// ```
+/// > Note: in a json file you must pass an array of string for rotations (not as in other files
+/// > where you pass it with ',' (coma))
+///
+/// **Example for a `env` file:**
+/// ```env
+/// colorized=true
+/// global_formatting="{file}-{line}-{module}<red>blyaaaa<red> {level}: {message}"
+/// file="ok_test_app_{date}_{time}.txt"
+/// rotations="1 day"
+/// archive_dir="archives_loggit"
+/// ```
+pub fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
+    let curr_conf = get_config().clone();
+
+    match crate::logger::from_file_config::load_config_from_file(path) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            let wc = get_write_config(); // if we failed at
+                                         // some point to
+                                         // write a config
+                                         // from file, we set
+                                         // the last actual
+                                         // config
+            if wc.is_some() {
+                let mut wc_c = wc.unwrap();
+                *wc_c = curr_conf;
+            }
+            Err(e)
+        }
+    }
+}
+
 ///Enables file compression for log archival.
 ///
 ///- **Description:**  
@@ -196,6 +283,30 @@ pub fn add_rotation(constraint: &str) -> Result<(), AddRotationError> {
 
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.
+///
+/// **Example:**
+///
+/// ```rust
+/// use loggit::logger;
+/// use loggit::Level;
+///
+/// logger::set_log_level(Level::DEBUG);
+///
+/// logger::TRACE!("trace mess"); // this will not be printed or written to a file
+/// logger::DEBUG!("debug mess"); // this will
+/// logger::INFO!("debug mess");
+/// ```
+///
+/// **Level hierarchy:**
+/// 1. ERROR
+/// 2. WARN
+/// 3. INFO
+/// 4. DEBUG
+/// 5. TRACE
+///
+/// The levels are written in the most important to less important, i.e, if you set a level, the
+/// ones below the set won't be printed or written to the file as shown in the example above (`TRACE`
+/// hasn't been taken into account as it's below the `DEBUG` in the hierarchy).
 pub fn set_log_level(lvl: Level) -> Result<(), SetLogLevelError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -234,6 +345,8 @@ pub fn set_colorized(val: bool) -> Result<(), SetColorizedError> {
 
 /// Sets a global log formatting string for all log levels.
 /// This function updates the formatting of each level to the given template.
+///
+/// To learn about log formats, visit: [set_level_formatting]
 pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError> {
     set_level_formatting(Level::TRACE, format)?;
     set_level_formatting(Level::DEBUG, format)?;
@@ -243,9 +356,27 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
     Ok(())
 }
 
-/// Sets a custom log formatting string for the specified log level.
+/// ## Sets a custom log formatting string for the specified log level.
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `{module}` and `{message}`.
+///
+/// ### Colors
+///
+/// The next colors are supported:
+/// - red
+/// - green
+/// - blue
+/// - yellow
+/// - black
+/// - white
+/// - purple
+///
+/// To apply a color to a part of your format, use the next syntax:
+/// ```
+/// ... <color>text {placeholder}<color> ...
+/// ```
+///
+/// > Note: each opened <color> tag must be close with the same <color> tag!
 ///
 /// Example:
 /// ```rust
@@ -253,8 +384,22 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 /// use loggit::Level;
 ///
 ///
+/// logger::set_level_formatting(Level::WARN, "{line} <red>WARNING - ATTENTION<red> {message}");
 /// logger::set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
 ///
+/// ```
+///
+/// Then the following code:
+/// ```rust
+/// logger::warn!("this is warn");
+/// logger::debug!("debug message");
+/// logger::warn!("changed text");
+/// ```
+/// may procude:
+/// ```sh
+/// 10 WARNING - ATTENTION this is warn
+/// loggit_test DEBUG [main.rs] debug message
+/// 12 WARNING - ATTENTION changed text
 /// ```
 pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
     let config_lock = get_write_config();
@@ -310,9 +455,8 @@ fn write_file_log(log_info: &LogInfo) {
     let cfg_snapshot = get_config().clone();
 
     let _ = with_fm::<(), AccessError, _>(|file_manager| {
-      
         let res = file_manager.write_log(&mess_to_print, cfg_snapshot);
-      
+
         match res {
             Ok(_) => Ok(()),
             Err(e) => {

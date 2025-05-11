@@ -117,10 +117,8 @@ impl LogFormatter {
 }
 impl Default for LogFormatter {
     fn default() -> Self {
-        LogFormatter::parse_from_string(
-            "<green>[{level}]<green> <blue>({file} {line})<blue> - {message}",
-        )
-        .unwrap()
+        LogFormatter::parse_from_string("{file}-{line} <green>[{level}]<green> - {message}")
+            .unwrap()
     }
 }
 

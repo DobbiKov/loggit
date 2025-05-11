@@ -1,5 +1,4 @@
 use std::{
-    fmt::format,
     fs::File,
     io::{self, BufReader},
 };
