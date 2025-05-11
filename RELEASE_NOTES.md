@@ -1,5 +1,8 @@
 # Release notes 
 
+## Version 0.1.5
+- Added a new feature of loading config from `json`, `ini` and `env` files using `load_config_from_file` function.
+
 ## Version 0.1.4
 - Improved error handling for setters
 - Added module as an option to the log messages parts
