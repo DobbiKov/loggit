@@ -259,6 +259,7 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
         } else {
             let rotations = v.split(',');
             for rot in rotations {
+                let rot = rot.trim_start().trim_end();
                 rots.push(rot.to_string());
             }
         }
@@ -358,6 +359,7 @@ fn parse_config_from_ini_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
         } else {
             let rotations = v.split(',');
             for rot in rotations {
+                let rot = rot.trim_start().trim_end();
                 rots.push(rot.to_string());
             }
         }
