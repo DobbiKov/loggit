@@ -176,7 +176,7 @@ fn main() {
 ````
 
 ## Documenation
-A complete user documentation can be found [here](./docs/DOC_PREVIEW.md)
+A complete user documentation can be found [here](https://docs.rs/loggit)
 
 ## Configuration
 
