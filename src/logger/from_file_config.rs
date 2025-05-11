@@ -269,12 +269,11 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
 }
 
 fn parse_config_from_json_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileError> {
-    let mut file =
-        std::fs::File::open(path).map_err(|e| ReadFromConfigFileError::ReadFileError(e))?;
+    let mut file = std::fs::File::open(path).map_err(ReadFromConfigFileError::ReadFileError)?;
     let mut contents = String::new();
     let read_res = file
         .read_to_string(&mut contents)
-        .map_err(|e| ReadFromConfigFileError::ReadFileError(e))?;
+        .map_err(ReadFromConfigFileError::ReadFileError)?;
 
     let cfg: ConfigForSerde = serde_json::from_str::<ConfigForSerde>(&contents)
         .map_err(|e| ReadFromConfigFileError::ParseError(e.to_string()))?;
@@ -378,13 +377,12 @@ fn parse_config_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileErr
         Some(r) => r,
     };
 
-    let res = match ext {
+    match ext {
         "ini" => parse_config_from_ini_file(path),
         "json" => parse_config_from_json_file(path),
         "env" => parse_config_from_env_file(path),
         _ => Err(ReadFromConfigFileError::IncorrectFileExtension),
-    };
-    res
+    }
 }
 
 fn parse_inter_config_from_serde_config(
