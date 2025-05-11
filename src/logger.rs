@@ -185,8 +185,7 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
 /// colorized=true
 /// global_formatting="{file}-{line}-{module}<red> it seem to work<red> {level}: {message}"
 /// warn_formatting = "{file}-{line}-{module}<red>WARN!<red> {message}"
-/// file=app_{date}_{time}.txt
-/// rotations="1 day, 12:30"
+/// file=app_{date}_{time}.txt rotations="1 day, 12:30"
 /// archive_dir="archives_loggit"
 /// ```
 ///
@@ -285,6 +284,30 @@ pub fn add_rotation(constraint: &str) -> Result<(), AddRotationError> {
 
 /// Sets the minimum log level to display.
 /// Messages with a level lower than the given level will be ignored.
+///
+/// **Example:**
+///
+/// ```rust
+/// use loggit::logger;
+/// use loggit::Level;
+///
+/// logger::set_log_level(Level::DEBUG);
+///
+/// logger::TRACE!("trace mess"); // this will not be printed or written to a file
+/// logger::DEBUG!("debug mess"); // this will
+/// logger::INFO!("debug mess");
+/// ```
+///
+/// **Level hierarchy:**
+/// 1. ERROR
+/// 2. WARN
+/// 3. INFO
+/// 4. DEBUG
+/// 5. TRACE
+///
+/// The levels are written in the most important to less important, i.e, if you set a level, the
+/// ones below the set won't be printed or written to the file as shown in the example above (`TRACE`
+/// hasn't been taken into account as it's below the `DEBUG` in the hierarchy).
 pub fn set_log_level(lvl: Level) -> Result<(), SetLogLevelError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -323,6 +346,8 @@ pub fn set_colorized(val: bool) -> Result<(), SetColorizedError> {
 
 /// Sets a global log formatting string for all log levels.
 /// This function updates the formatting of each level to the given template.
+///
+/// To learn about log formats, visit: [set_level_formatting]
 pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError> {
     set_level_formatting(Level::TRACE, format)?;
     set_level_formatting(Level::DEBUG, format)?;
@@ -332,9 +357,27 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
     Ok(())
 }
 
-/// Sets a custom log formatting string for the specified log level.
+/// ## Sets a custom log formatting string for the specified log level.
 ///
 /// The formatting string may contain placeholders like `{level}`, `{file}`, `{line}`, `{module}` and `{message}`.
+///
+/// ### Colors
+///
+/// The next colors are supported:
+/// - red
+/// - green
+/// - blue
+/// - yellow
+/// - black
+/// - white
+/// - purple
+///
+/// To apply a color to a part of your format, use the next syntax:
+/// ```
+/// ... <color>text {placeholder}<color> ...
+/// ```
+///
+/// > Note: each opened <color> tag must be close with the same <color> tag!
 ///
 /// Example:
 /// ```rust
@@ -342,8 +385,22 @@ pub fn set_global_formatting(format: &str) -> Result<(), SetLevelFormattingError
 /// use loggit::Level;
 ///
 ///
+/// logger::set_level_formatting(Level::WARN, "{line} <red>WARNING - ATTENTION<red> {message}");
 /// logger::set_level_formatting(Level::DEBUG, "{module} <red>{level}<red> [{file}] {message}");
 ///
+/// ```
+///
+/// Then the following code:
+/// ```rust
+/// logger::warn!("this is warn");
+/// logger::debug!("debug message");
+/// logger::warn!("changed text");
+/// ```
+/// may procude:
+/// ```sh
+/// 10 WARNING - ATTENTION this is warn
+/// loggit_test DEBUG [main.rs] debug message
+/// 12 WARNING - ATTENTION changed text
 /// ```
 pub fn set_level_formatting(level: Level, format: &str) -> Result<(), SetLevelFormattingError> {
     let config_lock = get_write_config();
