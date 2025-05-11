@@ -12,7 +12,6 @@ use ini::Ini;
 use serde::Deserialize;
 use serde::Serialize;
 
-// temp pub
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct ConfigForSerde {
     enabled: Option<String>,
@@ -391,7 +390,7 @@ fn parse_inter_config_from_serde_config(
     s_conf.try_into()
 }
 
-pub fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
+pub(crate) fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
     let parse_conf = parse_config_file(path)?;
     let inter_conf = parse_inter_config_from_serde_config(parse_conf)
         .map_err(|e| ReadFromConfigFileError::ParseError(e.to_string()))?;
