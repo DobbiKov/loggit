@@ -161,18 +161,22 @@ pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
 /// print_to_terminal: bool
 /// colorized: bool
 /// global_formatting: str
-/// trace_formatting
-/// debug_formatting
-/// info_formatting
-/// warn_formatting
-/// error_formatting
+/// trace_formatting: str
+/// debug_formatting: str
+/// info_formatting: str
+/// warn_formatting: str
+/// error_formatting: str
 ///
 /// file_name: str
 /// compression: str
 /// rotations: arr[str]
 /// archive_dir: str
 /// ```
-///
+/// > Note: For the `ini` and `env` files, for rotations you should write a single string with ','
+/// > divisor, example:
+/// ```
+/// rotations = "1 week, 12 MB, 12:30"
+/// ```
 /// > Note: For the ini files, the config must be in the `[Config]` sections
 ///
 /// **Example for an `ini` file:**
