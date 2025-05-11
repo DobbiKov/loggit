@@ -1,9 +1,9 @@
 // this module aims to provide a feature of setting the config up from a file (without explicitely
 // precising it in the file (but make it still possible))
 
-use std::error::Error;
 use std::io::Read;
 
+use crate::logger::set_errors::{ParseConfigError, ReadFromConfigFileError};
 use crate::Level;
 
 use crate::logger;
@@ -11,53 +11,6 @@ use env_file_reader;
 use ini::Ini;
 use serde::Deserialize;
 use serde::Serialize;
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum ReadFromConfigFileError {
-    #[error("couldn't open the config file to read: {0}")]
-    ReadFileError(std::io::Error),
-    #[error("incorrect file name")]
-    IncorrectFileName,
-    #[error("incorrect file extension")]
-    IncorrectFileExtension,
-    #[error("parse error: {0}")]
-    ParseError(String),
-    #[error("this config file is disabled to be used")]
-    DisabledToBeUsed,
-    #[error("incorrect value given")]
-    IncorrectValue,
-
-    #[error("failed to set log level: {0}")]
-    SetLogLevel(#[from] logger::set_errors::SetLogLevelError),
-
-    #[error("failed to set print_to_terminal: {0}")]
-    SetPrintToTerminal(#[from] logger::set_errors::SetPrintToTerminalError),
-
-    #[error("failed to set colorized: {0}")]
-    SetColorized(#[from] logger::set_errors::SetColorizedError),
-
-    #[error("failed to set global formatting: {0}")]
-    SetLevelFormatting(#[from] logger::set_errors::SetLevelFormattingError),
-
-    #[error("failed to configure file output: {0}")]
-    SetFile(#[from] logger::set_errors::SetFileError),
-
-    #[error("failed to set compression: {0}")]
-    SetCompression(#[from] logger::set_errors::SetCompressionError),
-
-    #[error("failed to add rotation: {0}")]
-    AddRotation(#[from] logger::set_errors::AddRotationError),
-
-    #[error("failed to set archive dir: {0}")]
-    SetArchiveDirError(#[from] logger::set_errors::SetArchiveDirError),
-}
-
-#[derive(Debug, Error)]
-pub enum ParseConfigError {
-    #[error("incorrect value given")]
-    IncorrectValue,
-}
 
 // temp pub
 #[derive(Serialize, Deserialize, Default, Debug)]

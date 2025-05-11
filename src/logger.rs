@@ -5,10 +5,9 @@
 //! The public macros (`trace!`, `debug!`, `info!`, `warn!`, `error!`) use the internal
 //! handlers to format and print the log message.
 
-use archivation::ensure_archive_dir;
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
-use from_file_config::ReadFromConfigFileError;
+use set_errors::ReadFromConfigFileError;
 use set_errors::{
     AccessError, AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError,
     SetFileError, SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
