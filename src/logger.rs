@@ -25,6 +25,7 @@ use crate::{
 pub mod archivation;
 pub mod file_handler;
 pub mod formatter;
+pub mod from_env;
 pub mod from_file_config;
 pub mod set_errors;
 
