@@ -120,7 +120,7 @@ const ALL_CONFIG_KEYS: &[&str] = &[
     "info_formatting",
     "warn_formatting",
     "error_formatting",
-    "file",
+    "file_name",
     "compression",
     "rotations",
     "archive_dir",
@@ -375,7 +375,7 @@ fn env_file_config() {
     // Ensure terminal output is off or tests might be noisy. Or check file content only.
     logger::set_print_to_terminal(false).unwrap();
 
-    let _guard_valid = EnvVarGuard::new("file", &file_pattern);
+    let _guard_valid = EnvVarGuard::new("file_name", &file_pattern);
     assert!(load_config_from_env().is_ok());
     let cfg = config_snapshot();
     assert!(cfg.file_manager.is_some());
@@ -406,7 +406,7 @@ fn env_file_config() {
 
     // Invalid (bad char)
     logger::init();
-    let _guard_invalid = EnvVarGuard::new("file", "test<bad>.log");
+    let _guard_invalid = EnvVarGuard::new("file_name", "test<bad>.log");
     let result_invalid = load_config_from_env();
     assert!(matches!(
         result_invalid,
@@ -418,7 +418,7 @@ fn env_file_config() {
 
     // Empty
     logger::init();
-    let _guard_empty = EnvVarGuard::new("file", "");
+    let _guard_empty = EnvVarGuard::new("file_name", "");
     let result_empty = load_config_from_env();
     assert!(matches!(
         result_empty,
@@ -438,7 +438,7 @@ fn env_compression_config() {
 
     // Valid (with file set first)
     logger::init();
-    let _guard_file = EnvVarGuard::new("file", &file_pattern);
+    let _guard_file = EnvVarGuard::new("file_name", &file_pattern);
     let _guard_comp = EnvVarGuard::new("compression", "zip");
     assert!(load_config_from_env().is_ok());
     let cfg = config_snapshot();
@@ -451,7 +451,7 @@ fn env_compression_config() {
 
     // Invalid compression type
     logger::init();
-    let _guard_file_2 = EnvVarGuard::new("file", &file_pattern);
+    let _guard_file_2 = EnvVarGuard::new("file_name", &file_pattern);
     let _guard_comp_invalid = EnvVarGuard::new("compression", "rar");
     let result_invalid = load_config_from_env();
     assert!(matches!(
@@ -464,7 +464,7 @@ fn env_compression_config() {
 
     // Compression without file
     logger::init();
-    // No "file" guard here
+    // No "file_name" guard here
     //let _guard_comp_nofile = EnvVarGuard::new("compression", "zip");
     //let result_nofile = load_config_from_env();
     //assert!(matches!(
@@ -476,7 +476,7 @@ fn env_compression_config() {
 
     // Empty compression type
     logger::init();
-    let _guard_file_3 = EnvVarGuard::new("file", &file_pattern);
+    let _guard_file_3 = EnvVarGuard::new("file_name", &file_pattern);
     let _guard_comp_empty = EnvVarGuard::new("compression", "");
     let result_empty = load_config_from_env();
     assert!(matches!(
@@ -498,7 +498,7 @@ fn env_rotations_config() {
 
     // Valid single rotation
     logger::init();
-    let _g_file1 = EnvVarGuard::new("file", &file_pattern);
+    let _g_file1 = EnvVarGuard::new("file_name", &file_pattern);
     let _g_rot1 = EnvVarGuard::new("rotations", "1 day");
     assert!(load_config_from_env().is_ok());
     let fm_dbg1 = format!(
@@ -510,7 +510,7 @@ fn env_rotations_config() {
 
     // Valid multiple rotations, comma-separated with spaces
     logger::init();
-    let _g_file2 = EnvVarGuard::new("file", &file_pattern);
+    let _g_file2 = EnvVarGuard::new("file_name", &file_pattern);
     let _g_rot2 = EnvVarGuard::new("rotations", "10 MB,  12:30 ");
     assert!(load_config_from_env().is_ok());
     let fm_dbg2 = format!(
@@ -524,7 +524,7 @@ fn env_rotations_config() {
 
     // Invalid rotation
     logger::init();
-    let _g_file3 = EnvVarGuard::new("file", &file_pattern);
+    let _g_file3 = EnvVarGuard::new("file_name", &file_pattern);
     let _g_rot_invalid = EnvVarGuard::new("rotations", "bad value");
     let res_invalid = load_config_from_env();
     assert!(matches!(
@@ -548,7 +548,7 @@ fn env_rotations_config() {
 
     // Empty rotation string
     logger::init();
-    let _g_file4 = EnvVarGuard::new("file", &file_pattern);
+    let _g_file4 = EnvVarGuard::new("file_name", &file_pattern);
     let _g_rot_empty = EnvVarGuard::new("rotations", "");
     let res_empty = load_config_from_env();
     assert!(matches!(
@@ -561,7 +561,7 @@ fn env_rotations_config() {
 
     // Comma with empty parts
     logger::init();
-    let _g_file5 = EnvVarGuard::new("file", &file_pattern);
+    let _g_file5 = EnvVarGuard::new("file_name", &file_pattern);
     let _g_rot_comma = EnvVarGuard::new("rotations", ",1 day,"); // first part empty
     let res_comma = load_config_from_env();
     assert!(matches!(

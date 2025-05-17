@@ -243,7 +243,7 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
         res_conf.error_formatting = Some(v.to_owned());
     }
 
-    if let Some(v) = vars_r.get("file") {
+    if let Some(v) = vars_r.get("file_name") {
         res_conf.file_name = Some(v.to_owned());
     }
     if let Some(v) = vars_r.get("compression") {

@@ -37,7 +37,7 @@ fn parse_config_from_env() -> Result<ConfigForSerde, ReadFromConfigFileError> {
         res_conf.error_formatting = Some(v.to_owned());
     }
 
-    if let Ok(v) = env::var("file") {
+    if let Ok(v) = env::var("file_name") {
         res_conf.file_name = Some(v.to_owned());
     }
     if let Ok(v) = env::var("compression") {
