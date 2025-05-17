@@ -13,26 +13,26 @@ use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-struct ConfigForSerde {
-    enabled: Option<String>,
-    level: Option<String>,
-    print_to_terminal: Option<String>,
-    colorized: Option<String>,
-    global_formatting: Option<String>,
-    trace_formatting: Option<String>,
-    debug_formatting: Option<String>,
-    info_formatting: Option<String>,
-    warn_formatting: Option<String>,
-    error_formatting: Option<String>,
+pub(crate) struct ConfigForSerde {
+    pub(crate) enabled: Option<String>,
+    pub(crate) level: Option<String>,
+    pub(crate) print_to_terminal: Option<String>,
+    pub(crate) colorized: Option<String>,
+    pub(crate) global_formatting: Option<String>,
+    pub(crate) trace_formatting: Option<String>,
+    pub(crate) debug_formatting: Option<String>,
+    pub(crate) info_formatting: Option<String>,
+    pub(crate) warn_formatting: Option<String>,
+    pub(crate) error_formatting: Option<String>,
 
-    file_name: Option<String>,
-    compression: Option<String>,
-    rotations: Option<Vec<String>>,
-    archive_dir: Option<String>,
+    pub(crate) file_name: Option<String>,
+    pub(crate) compression: Option<String>,
+    pub(crate) rotations: Option<Vec<String>>,
+    pub(crate) archive_dir: Option<String>,
 }
 
 #[derive(Default)]
-struct InterConfig {
+pub(crate) struct InterConfig {
     enabled: Option<bool>,
     level: Option<Level>,
     print_to_terminal: Option<bool>,
@@ -53,7 +53,7 @@ struct InterConfig {
 impl InterConfig {
     /// Apply all of the settings that were present in the parsed config.
     /// If `enabled` is Some(false), returns Err(DisabledToBeUsed) immediately.
-    fn apply(self) -> Result<(), ReadFromConfigFileError> {
+    pub(crate) fn apply(self) -> Result<(), ReadFromConfigFileError> {
         // Honor the `enabled` flag
         if let Some(enabled) = self.enabled {
             if !enabled {
@@ -243,7 +243,7 @@ fn parse_config_from_env_file(path: &str) -> Result<ConfigForSerde, ReadFromConf
         res_conf.error_formatting = Some(v.to_owned());
     }
 
-    if let Some(v) = vars_r.get("file") {
+    if let Some(v) = vars_r.get("file_name") {
         res_conf.file_name = Some(v.to_owned());
     }
     if let Some(v) = vars_r.get("compression") {
@@ -386,7 +386,7 @@ fn parse_config_file(path: &str) -> Result<ConfigForSerde, ReadFromConfigFileErr
     }
 }
 
-fn parse_inter_config_from_serde_config(
+pub(crate) fn parse_inter_config_from_serde_config(
     s_conf: ConfigForSerde,
 ) -> Result<InterConfig, ParseConfigError> {
     s_conf.try_into()

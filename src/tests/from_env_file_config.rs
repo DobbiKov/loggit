@@ -185,7 +185,7 @@ fn env_file_and_compression_and_rotations() {
     // Everything valid
     init();
     let p = temp_env_file(
-        "file=app_{date}_{time}.txt\ncompression=zip\nrotations=\"1 day,500 MB,12:30\"\n",
+        "file_name=app_{date}_{time}.txt\ncompression=zip\nrotations=\"1 day,500 MB,12:30\"\n",
     );
     assert!(load_config_from_file(p.to_str().unwrap()).is_ok());
 
@@ -206,7 +206,7 @@ fn env_file_and_compression_and_rotations() {
 fn env_file_invalid_format() {
     init();
     // forbidden character '<' inside file format
-    let p = temp_env_file("file=bad<name>.txt\n");
+    let p = temp_env_file("file_name=bad<name>.txt\n");
     let res = load_config_from_file(p.to_str().unwrap());
     assert!(matches!(res, Err(ReadFromConfigFileError::SetFile(_))));
     fs::remove_file(p).ok();
@@ -228,7 +228,7 @@ fn env_compression_without_file() {
 fn env_invalid_compression_value() {
     init();
     // configure file properly, but give unsupported compression algorithm
-    let p = temp_env_file("file=app_{date}.txt\ncompression=rar\n");
+    let p = temp_env_file("file_name=app_{date}.txt\ncompression=rar\n");
     let res = load_config_from_file(p.to_str().unwrap());
     assert!(matches!(
         res,
@@ -240,7 +240,7 @@ fn env_invalid_compression_value() {
 #[test]
 fn env_rotations_invalid() {
     init();
-    let p = temp_env_file("file=app_{date}.txt\nrotations=invalid\n");
+    let p = temp_env_file("file_name=app_{date}.txt\nrotations=invalid\n");
     let res = load_config_from_file(p.to_str().unwrap());
     assert!(matches!(res, Err(ReadFromConfigFileError::AddRotation(_))));
     fs::remove_file(p).ok();

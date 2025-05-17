@@ -20,7 +20,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! loggit = "0.1.4"
+//! loggit = "0.1.5"
 //! ```
 //!
 //! Or use:
@@ -29,22 +29,185 @@
 //! cargo add loggit
 //! ```
 //!
-//! ## Usage Example
+//! ## Usage Examples
 //!
-//! ```rust
-//! use loggit::{logger::init, trace, debug, info, warn, error, logger::set_log_level, Level};
+//! ### Basic Logging
+//!
+//! Simply import the logger macros and use it in your project:
+//!
+//! ````rust
+//! use loggit::{trace, debug, info, warn, error};
 //!
 //! fn main() {
-//!     // Optionally set a custom log level.
-//!     set_log_level(Level::DEBUG);
-//!
 //!     trace!("This is a trace message.");
-//!     debug!("Debug message: value = {}", 42);
+//!     debug!("Debug message: variable value = {}", 42);
 //!     info!("Informational message.");
-//!     warn!("Warning: check configuration!");
+//!     warn!("Warning: something might be off.");
 //!     error!("Error occurred: {}", "example error");
 //! }
+//! ````
+//!
+//! ### Customizing the Log Level
+//!
+//! Set the minimum log level so that only messages at that level and above are printed:
+//!
+//! ````rust
+//! use loggit::logger::set_log_level;
+//! use loggit::Level;
+//!
+//! fn main() {
+//!     // Set log level to DEBUG; TRACE messages will be ignored.
+//!     set_log_level(Level::DEBUG);
+//!
+//!     debug!("This is a debug message.");
+//!     trace!("This trace message will not be logged.");
+//! }
+//! ````
+//!
+//! ### Customizing the Log Format
+//!
+//! You can adjust the log format globally or per log level. Templates can include placeholders like `{level}`, `{file}`, `{line}`, and `{message}`. Colors can be configured by wrapping text with color tags.
+//!
+//! **Global Format Customization**
+//!
+//! ````rust
+//! use loggit::logger::set_global_formatting;
+//!
+//! fn main() {
+//!     // Set a global custom log format using color tags.
+//!     set_global_formatting("<green>[{level}]<green> ({file}:{line}) - {message}");
+//!
+//!     info!("This info message follows the new global format.");
+//!     info!("The error message as well.");
+//! }
+//! ````
+//!
+//! **Level-Specific Format Customization**
+//!
+//! ````rust
+//! use loggit::logger::set_level_formatting;
+//! use loggit::Level;
+//!
+//! fn main() {
+//!     // Customize the ERROR log format specifically.
+//!     set_level_formatting(
+//!         Level::ERROR,
+//!         "<red>[{level}]<red> <blue>({file}:{line})<blue> - <red>{message}<red>"
+//!     );
+//!
+//!     error!("This error message will follow the custom error format.");
+//! }
+//! ````
+//!
+//! ### Enabling Colorized Output
+//!
+//! Enable or disable colored output based on your preference:
+//!
+//! ````rust
+//! use loggit::logger::set_colorized;
+//!
+//! fn main() {
+//!     // Enable colored output.
+//!     set_colorized(true);
+//!     
+//!     info!("This info message will be colorized as specified in the format.");
+//! }
+//! ````
+//!
+//! ### Customizing Terminal Output
+//!
+//! Control whether messages are printed directly to the terminal:
+//!
+//! ````rust
+//! use loggit::logger::set_print_to_terminal;
+//!
+//! fn main() {
+//!     // Disable terminal output (for example, if you want to log to a file instead).
+//!     set_print_to_terminal(false);
+//!     
+//!     info!("This message will not be printed to the terminal.");
+//! }
+//! ````
+//!
+//! ### Setting up logging to the file
+//!
+//! Enable save all your logs to a file
+//!
+//! ````rust
+//! use loggit::logger::set_file;
+//!
+//! fn main() {
+//!     // provide file name
+//!     set_file("file_name.txt");
+//! }
+//! ````
+//!
+//! You can choose a format for the file name:
+//!
+//! ````rust
+//! use loggit::logger::set_file;
+//!
+//! fn main() {
+//!     // provide file name
+//!     set_file("{level}-log-on-{date}.txt");
+//! }
+//! ````
+//!
+//! Choose how oftenly you change your file
+//!
+//! ````rust
+//! use loggit::logger::{set_file, add_rotation};
+//!
+//! fn main() {
+//!     // provide file name
+//!     set_file("{level}-log-on-{date}.txt");
+//!     add_rotation("1 week"); // change the file every week
+//!     add_rotation("5 MB"); // max file size 5 MB, then again change of the file
+//! }
+//! ````
+//!
+//! Save your space by compressing log files
+//! ```rust
+//! use loggit::logger::{set_file, set_compression};
+//!
+//! fn main() {
+//!     // provide file name
+//!     set_file("{level}-log-on-{date}.txt");
+//!     set_compression("zip");
+//! }
 //! ```
+//!
+//! Choose the directory to save archived log files to
+//! ```rust
+//! use loggit::logger::{set_file, set_compression, set_archive_dir};
+//!
+//! fn main() {
+//!     // provide file name
+//!     set_file("{level}-log-on-{date}.txt");
+//!     set_compression("zip");
+//!     set_archive_dir("my_archives"); // all the archives will be stored in the `my_archives` directory
+//! }
+//! ```
+//! ### Configurate logger using env variables
+//! ```sh
+//! colorized=false file_name="save_here.txt" cargo run
+//! ```
+//!
+//! ### Importing config from files
+//! ```rust
+//! use loggit::logger::{load_config_from_file};
+//!
+//! fn main(){
+//!    let _ = load_config_from_file("my_conf.json");
+//! }
+//! ```
+//!
+//! Or simply crate a config file with one of those names:
+//! - `loggit.env`
+//! - `loggit.ini`
+//! - `loggit.json`
+//!
+//! And it will be loaded automatically
 //!
 //! ## Modules
 //!

@@ -1,9 +1,10 @@
 [package]
 name = "loggit"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 license = "MIT"
 description = "Loggit is a lightweight, easy-to-use logging library for Rust."
+documentation = "https://docs.rs/loggit/"
 homepage = "https://github.com/DobbiKov/loggit"
 repository = "https://github.com/DobbiKov/loggit"
 readme = "README.md"

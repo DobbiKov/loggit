@@ -19,7 +19,7 @@ Add LogGit to your Cargo.toml:
 
 ````toml
 [dependencies]
-loggit = "0.1.4"
+loggit = "0.1.5"
 ````
 
 or just write in the terminal:
@@ -165,7 +165,7 @@ fn main() {
 ````
 
 Save your space by compressing log files
-````rust
+```rust
 use loggit::logger::{set_file, set_compression};
 
 fn main() {
@@ -173,9 +173,42 @@ fn main() {
     set_file("{level}-log-on-{date}.txt");
     set_compression("zip");
 }
-````
+```
 
-## Documenation
+Choose the directory to save archived log files to
+```rust
+use loggit::logger::{set_file, set_compression, set_archive_dir};
+
+fn main() {
+    // provide file name
+    set_file("{level}-log-on-{date}.txt");
+    set_compression("zip");
+    set_archive_dir("my_archives"); // all the archives will be stored in the `my_archives` directory 
+}
+```
+
+### Configurate logger using env variables
+```sh
+colorized=false file_name="save_here.txt" cargo run
+```
+
+### Importing config from files
+```rust
+use loggit::logger::{load_config_from_file};
+
+fn main(){
+   let _ = load_config_from_file("my_conf.json");
+}
+```
+
+Or simply crate a config file with one of those names:
+- `loggit.env`
+- `loggit.ini`
+- `loggit.json`
+
+And it will be loaded automatically
+
+## Documentation
 A complete user documentation can be found [here](https://docs.rs/loggit)
 
 ## Configuration
@@ -188,6 +221,7 @@ Internally, LogGit uses a simple configuration structure which holds:
 - **Custom file names**: A format of a name that a file will take
 - **File rotation**: How oftenly will the file be changed
 - **Compression method**: To save space, you can specify the compression method. 
+- **Archives directory**: A directory to store the archives in
 
 The default configuration already provides sensible defaults, so you can get started right away. Customization is available for those who need advanced logging setups.
 
