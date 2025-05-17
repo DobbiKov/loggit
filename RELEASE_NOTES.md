@@ -1,5 +1,10 @@
 # Release notes 
 
+## Version 0.1.6
+- Added a new feature of loading config from `env` variables.
+- If the file `loggit.(json/ini/env)` are found in the root directory the library will automatically load the config from one of those files.
+- If the `env` variables are set, the library will automatically set the config from those set variables.
+
 ## Version 0.1.5
 - Added a new feature of loading config from `json`, `ini` and `env` files using `load_config_from_file` function.
 
