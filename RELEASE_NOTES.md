@@ -1,5 +1,8 @@
 # Release notes 
 
+## Version 0.1.7
+- Fixed critical error when the result of the set functions were always overwritten by default ones or the ones from the log files.
+
 ## Version 0.1.6
 - Added a new feature of loading config from `env` variables.
 - If the file `loggit.(json/ini/env)` are found in the root directory the library will automatically load the config from one of those files.
