@@ -7,11 +7,13 @@
 
 use file_handler::file_manager::FileManager;
 use formatter::{LogColor, LogFormatter};
+use from_env::load_config_from_env;
 use set_errors::ReadFromConfigFileError;
 use set_errors::{
     AccessError, AddRotationError, SetArchiveDirError, SetColorizedError, SetCompressionError,
     SetFileError, SetLevelFormattingError, SetLogLevelError, SetPrintToTerminalError,
 };
+use std::sync::Once;
 use std::{
     path::PathBuf,
     sync::{Arc, Mutex, RwLockReadGuard, RwLockWriteGuard},
@@ -28,6 +30,9 @@ pub mod formatter;
 pub mod from_env;
 pub mod from_file_config;
 pub mod set_errors;
+
+// init once for the lib initialization
+static INIT_ONCE: Once = Once::new();
 
 struct LogInfo {
     module_path: String,
@@ -481,6 +486,10 @@ fn log_handler(log_info: LogInfo) {
 
 // handles call from macro and passes deeper
 fn macro_handler(module_path: &str, file: &str, line: u32, deb_str: String, level: Level) {
+    INIT_ONCE.call_once(|| {
+        init_with_imports();
+    });
+
     let log_info = LogInfo {
         module_path: module_path.to_string(),
         file: file.to_string(),
@@ -593,4 +602,33 @@ pub fn init() {
     *config = Config {
         ..Default::default()
     }
+}
+
+/// Initializes the logger with default settings using [init] function.
+///
+/// In addition to this, if it finds one of the files in the root directory:
+/// - `loggit.env`
+/// - `loggit.ini`
+/// - `loggit.json`
+/// It will try to import config from the first found file.
+///
+/// In the end, it will load config from the env variables.
+///
+/// > Note: This function is always called by defualt when the library is initialized at first.
+pub fn init_with_imports() {
+    init();
+    let file_names = ["loggit.env", "loggit.ini", "loggit.json"];
+    for file_name in file_names {
+        if let Ok(r) = std::fs::exists(std::path::Path::new(file_name)) {
+            if !r {
+                continue;
+            }
+
+            let load_rs = load_config_from_file(file_name);
+            if load_rs.is_ok() {
+                break;
+            }
+        }
+    }
+    let _ = load_config_from_env();
 }
