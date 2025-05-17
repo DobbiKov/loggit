@@ -1,4 +1,5 @@
 mod file_manager;
+mod from_env_config;
 mod from_env_file_config;
 mod from_ini_file_config;
 mod from_json_file_config;
