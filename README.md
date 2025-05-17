@@ -241,9 +241,6 @@ Using `cargo test` is not recommended as it runs tests using multiple threads th
 ## Release notes
 In order to read release notes for each version, click [here](./RELEASE_NOTES.md)
 
-## TODO
-- [ ] getting config from json/env files
-
 ## License
 
 LogGit is licensed under the MIT License.
