@@ -213,6 +213,7 @@
 //!
 //! - [`logger`]: Contains functions to control logging configuration and macros to log messages.
 
+use ctor::ctor;
 use logger::{file_handler::file_manager::FileManager, formatter::LogFormatter};
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
@@ -287,3 +288,8 @@ static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| {
 });
 
 pub mod logger;
+
+#[ctor]
+fn library_startup() {
+    crate::logger::init_with_imports();
+}

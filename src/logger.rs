@@ -31,9 +31,6 @@ pub mod from_env;
 pub mod from_file_config;
 pub mod set_errors;
 
-// init once for the lib initialization
-static INIT_ONCE: Once = Once::new();
-
 struct LogInfo {
     module_path: String,
     file: String,
@@ -486,10 +483,6 @@ fn log_handler(log_info: LogInfo) {
 
 // handles call from macro and passes deeper
 fn macro_handler(module_path: &str, file: &str, line: u32, deb_str: String, level: Level) {
-    INIT_ONCE.call_once(|| {
-        init_with_imports();
-    });
-
     let log_info = LogInfo {
         module_path: module_path.to_string(),
         file: file.to_string(),
