@@ -23,6 +23,7 @@ pub(crate) struct FileManager {
     file_format: FileFormatter,
     file_name: FileName,
     file_constraints: FileConstraints,
+    curr_file: std::sync::Arc<std::fs::File>,
 }
 
 #[derive(Error, Debug)]
@@ -31,6 +32,8 @@ pub enum FileManagerFromStringError {
     FileFormatParsingError(FileFormatterTryFromStringError),
     #[error("format parsing for the file name error: {0}")]
     FileNameParsingError(FileNameFromFileFormatterError),
+    #[error("io error {0}")]
+    IoError(std::io::Error)
 }
 
 #[derive(Error, Debug)]
@@ -108,10 +111,24 @@ impl FileManager {
                 return Err(FileManagerFromStringError::FileNameParsingError(e));
             }
         };
+        let full_file_name: String = f_name.clone().into();
+
+    let mut file = match std::fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(full_file_name)
+    {
+        Ok(f) => f,
+        Err(e) => {
+            return Err(FileManagerFromStringError::IoError(e));
+        }
+    };
+
         Ok(FileManager {
             file_format: f_format,
             file_name: f_name,
             file_constraints: Default::default(),
+            curr_file: std::sync::Arc::new(file)
         })
     }
     /// Returns full current file name (that already exists) in a String
@@ -141,6 +158,9 @@ impl FileManager {
             None => false,
         }
     }
+    fn set_curr_file(&mut self, curr_file: std::fs::File){
+        self.curr_file = std::sync::Arc::new(curr_file);
+    }
     pub(crate) fn remove_compression(&mut self) {
         self.file_constraints.compression = None;
     }
@@ -159,12 +179,18 @@ impl FileManager {
                         };
                     self.file_name = new_f_name;
                     let f_name_str = self.file_name.get_full_file_name();
-                    match std::fs::File::create(f_name_str) {
-                        Ok(_) => return Ok(()),
+                    let file = match std::fs::OpenOptions::new()
+                            .append(true)
+                            .create(true)
+                            .open(f_name_str) 
+                    {
+                        Ok(f) => f,
                         Err(e) => {
                             return Err(CreateNewFileError::UnableToCreateFileIO(e));
                         }
-                    }
+                    };
+                    self.set_curr_file(file);
+                    return Ok(())
                 }
                 true => {
                     self.file_name.increase_num();
@@ -219,27 +245,7 @@ impl FileManager {
         config: &Config,
     ) -> Result<VerifyConstraintsRes, VerifyConstraintsError> {
         let curr_file_name = self.file_name.get_full_file_name();
-        if !std::path::Path::new(&curr_file_name).exists() {
-            // file doesn't exist
-            match File::create(&curr_file_name) {
-                Ok(_) => {}
-                Err(e) => {
-                    return Err(VerifyConstraintsError::UnableToCreateFile(
-                        curr_file_name.clone(),
-                        e,
-                    ));
-                }
-            }
-        };
-        let file = match std::fs::File::open(&curr_file_name) {
-            Err(e) => {
-                return Err(VerifyConstraintsError::UnableToOpenFile(
-                    curr_file_name.clone(),
-                    e,
-                ));
-            }
-            Ok(f) => f,
-        };
+        let file = self.curr_file.clone();
         let f_size = match file.metadata() {
             Err(e) => {
                 return Err(VerifyConstraintsError::UnableToGetFileMetadata(
@@ -379,11 +385,16 @@ impl FileManager {
                 ok_res = Err(e)
             }
         }
-        let f_name = self.get_file_name();
 
-        helper::write_to_file(&f_name, mess)
+        let arc_file = self.curr_file.clone();
+        let mut file = (*arc_file).try_clone().map_err(|e| WriteLogError::UnableToWriteToFile(WriteToFileError::UnexpectedError(e)))?;
+
+        let res = helper::write_to_file(&mut file, mess)
             .map(|_| ok_res.unwrap())
-            .map_err(WriteLogError::UnableToWriteToFile)
+            .map_err(WriteLogError::UnableToWriteToFile);
+
+        self.set_curr_file(file);
+        res
     }
 }
 
