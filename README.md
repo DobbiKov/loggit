@@ -45,6 +45,7 @@ fn main() {
     error!("Error occurred: {}", "example error");
 }
 ````
+![prints](./images/main_print.png)
 
 ### Customizing the Log Level
 
@@ -62,6 +63,7 @@ fn main() {
     trace!("This trace message will not be logged.");
 }
 ````
+![set_log_level](./images/set_log_level.png)
 
 ### Customizing the Log Format
 
@@ -77,9 +79,10 @@ fn main() {
     set_global_formatting("<green>[{level}]<green> ({file}:{line}) - {message}");
 
     info!("This info message follows the new global format.");
-    info!("The error message as well.");
+    error!("The error message as well.");
 }
 ````
+![global formating](./images/global_formating.png)
 
 **Level-Specific Format Customization**
 
@@ -94,11 +97,14 @@ fn main() {
         "<red>[{level}]<red> <blue>({file}:{line})<blue> - <red>{message}<red>"
     );
 
+    info!("Info follows the standard formatting");
+    info!("Warn follows the standard formatting");
     error!("This error message will follow the custom error format.");
 }
 ````
+![level formating](./images/level_formating.png)
 
-### Enabling Colorized Output
+### Disable Colorized Output
 
 Enable or disable colored output based on your preference:
 
@@ -107,11 +113,12 @@ use loggit::logger::set_colorized;
 
 fn main() {
     // Enable colored output.
-    set_colorized(true);
+    set_colorized(false);
     
-    info!("This info message will be colorized as specified in the format.");
+    info!("This info message will not be colorized");
 }
 ````
+![set_colorized](./images/set_colorized.png)
 
 ### Customizing Terminal Output
 
@@ -127,6 +134,7 @@ fn main() {
     info!("This message will not be printed to the terminal.");
 }
 ````
+![set_print_to_terminal](./images/set_print_terminal.png)
 
 ### Setting up logging to the file
 
@@ -151,6 +159,7 @@ fn main() {
     set_file("{level}-log-on-{date}.txt");
 }
 ````
+![set file format](./images/set_file_format.png)
 
 Choose how oftenly you change your file
 

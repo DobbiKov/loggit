@@ -253,7 +253,7 @@ impl Default for Config {
         Self {
             level: Default::default(),
             print_to_terminal: true,
-            colorized: false,
+            colorized: true,
             trace_log_format: Default::default(),
             debug_log_format: Default::default(),
             info_log_format: Default::default(),
