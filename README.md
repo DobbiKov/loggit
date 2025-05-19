@@ -12,6 +12,7 @@ Loggit is a lightweight, easy-to-use logging library for Rust. It provides ready
 - **Saving log to files**: Save your logs to files automaticaly by specifying filename format 
 - **File rotation**: Rotate your files by specifying time period or size
 - **Compress used files**: Save your space by compressing used log files
+- **Load config from anywhere**: Load your config from _your_ file or load it from `env` or default files without any code!
 
 ## Installation
 
@@ -19,7 +20,7 @@ Add LogGit to your Cargo.toml:
 
 ````toml
 [dependencies]
-loggit = "0.1.7"
+loggit = "0.1.8"
 ````
 
 or just write in the terminal:
