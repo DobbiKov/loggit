@@ -83,6 +83,8 @@ pub(crate) enum VerifyConstraintsRes {
 pub(crate) enum WriteLogError {
     #[error("unable to write to the file: {0}")]
     UnableToWriteToFile(WriteToFileError),
+    #[error("constraints verification failed: {0}")]
+    VerifyConstraintsError(VerifyConstraintsError),
 }
 #[derive(Debug, Error)]
 pub(crate) enum CreateNewFileError {
@@ -376,25 +378,23 @@ impl FileManager {
         mess: &str,
         config: Config,
     ) -> Result<VerifyConstraintsRes, WriteLogError> {
-        let mut ok_res = Ok(VerifyConstraintsRes::ConstraintsPassed);
-        match self.verify_constraints(&config) {
-            Ok(r) => ok_res = Ok(r),
+        let verify_res = match self.verify_constraints(&config) {
+            Ok(r) => Ok(r),
             Err(e) => {
                 eprintln!("An error occured while verifying constraints: {}", e);
                 eprintln!("Trying to write to an old file");
-                ok_res = Err(e)
+                Err(e)
             }
-        }
+        };
 
         let arc_file = self.curr_file.clone();
         let mut file = (*arc_file).try_clone().map_err(|e| WriteLogError::UnableToWriteToFile(WriteToFileError::UnexpectedError(e)))?;
-
-        let res = helper::write_to_file(&mut file, mess)
-            .map(|_| ok_res.unwrap())
-            .map_err(WriteLogError::UnableToWriteToFile);
+        helper::write_to_file(&mut file, mess)
+            .map_err(WriteLogError::UnableToWriteToFile)?;
 
         self.set_curr_file(file);
-        res
+
+        verify_res.map_err(WriteLogError::VerifyConstraintsError)
     }
 }
 
