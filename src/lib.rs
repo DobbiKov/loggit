@@ -10,7 +10,7 @@
 //!- **Customizable**: Change log formats, colors, and logging levels.
 //!- **Macros Provided**: Includes `trace!`, `debug!`, `info!`, `warn!`, and `error!`.
 //!- **Flexible Formatting**: Use custom templates with placeholders like `{level}`, `{file}`, `{line}`, and `{message}`.
-//!- **Saving log to files**: Save your logs to files automaticaly by specifying filename format
+//!- **Saving log to files**: Save your logs to files automatically by specifying filename format
 //!- **File rotation**: Rotate your files by specifying time period or size
 //!- **Compress used files**: Save your space by compressing used log files
 //!
@@ -129,9 +129,9 @@
 //! }
 //! ````
 //!
-//! ### Setting up logging to the file
+//! ### Setting up logging to a file
 //!
-//! Enable save all your logs to a file
+//! Enable saving all your logs to a file
 //!
 //! ````rust
 //! use loggit::logger::set_file;
@@ -153,7 +153,7 @@
 //! }
 //! ````
 //!
-//! Choose how oftenly you change your file
+//! Choose how often you change your file
 //!
 //! ````rust
 //! use loggit::logger::{set_file, add_rotation};
@@ -162,7 +162,7 @@
 //!     // provide file name
 //!     set_file("{level}-log-on-{date}.txt");
 //!     add_rotation("1 week"); // change the file every week
-//!     add_rotation("5 MB"); // max file size 5 MB, then again change of the file
+//!     add_rotation("5 MB"); // max file size 5 MB, then the file changes again
 //! }
 //! ````
 //!
@@ -188,7 +188,7 @@
 //!     set_archive_dir("my_archives"); // all the archives will be stored in the `my_archives` directory
 //! }
 //! ```
-//! ### Configurate logger using env variables
+//! ### Configure logger using environment variables
 //! ```sh
 //! colorized=false file_name="save_here.txt" cargo run
 //! ```
@@ -202,7 +202,7 @@
 //! }
 //! ```
 //!
-//! Or simply crate a config file with one of those names:
+//! Or simply create a config file with one of those names:
 //! - `loggit.env`
 //! - `loggit.ini`
 //! - `loggit.json`
