@@ -9,8 +9,8 @@ pub(crate) struct FileFormatter {
 
 #[derive(Debug, Error)]
 pub enum FileFormatterTryFromStringError {
-    #[error("an incrorrect caracter given: {0}")]
-    IncorrectCaracterGiven(char),
+    #[error("an incorrect character given: {0}")]
+    IncorrectCharacterGiven(char),
     #[error("An empty string was provided!")]
     EmptyStringGiven,
     #[error("No file extension provided")]
@@ -23,15 +23,15 @@ impl FileFormatter {
     pub(crate) fn is_part_authorized(part: &LogPart) -> bool {
         !matches!(part, LogPart::Message | LogPart::File | LogPart::Line)
     }
-    fn forbidden_caracters() -> [char; 4] {
+    fn forbidden_characters() -> [char; 4] {
         ['<', '>', '&', '%']
     }
     pub(crate) fn try_from_string(
         format: &str,
     ) -> Result<FileFormatter, FileFormatterTryFromStringError> {
-        for ch in FileFormatter::forbidden_caracters() {
+        for ch in FileFormatter::forbidden_characters() {
             if format.contains(ch) {
-                return Err(FileFormatterTryFromStringError::IncorrectCaracterGiven(ch));
+                return Err(FileFormatterTryFromStringError::IncorrectCharacterGiven(ch));
             }
         }
         let elems = match crate::logger::formatter::parse_string_to_logparts(format) {
