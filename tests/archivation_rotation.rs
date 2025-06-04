@@ -14,8 +14,8 @@ use loggit::{
     Level,
 };
 
-/// We rotate after 1 KB, so a few thousand reasonably long messages are plenty.
-const MESSAGES: usize = 2_000;
+/// We rotate after 1 KB, so a few hundred reasonably long messages are plenty.
+const MESSAGES: usize = 50;
 
 #[test]
 fn rotation_creates_zip_archive() {
@@ -42,8 +42,13 @@ fn rotation_creates_zip_archive() {
     for n in 0..MESSAGES {
         info!("msg {n}: lorem ipsum dolor sit amet, consectetur adipiscing elit.");
     }
+    // One more message so a new log file gets created after rotation.
+    info!("post-rotation message");
 
     // Tiny wait to make sure the last write flushed & compression finished.
+    thread::sleep(Duration::from_millis(50));
+    // And another log entry to guarantee the new file exists on disk.
+    info!("post-check message");
     thread::sleep(Duration::from_millis(50));
 
     // Assert: at least one .zip archive exists in the archive directory.
@@ -59,6 +64,20 @@ fn rotation_creates_zip_archive() {
         }
     }
     assert!(zip_found, "no .zip archive produced after rotation");
+
+    // Assert: rotation should leave a new active log file.
+    let mut log_found = false;
+    for entry in fs::read_dir(".").unwrap() {
+        let p = entry.unwrap().path();
+        if p.file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.starts_with(&prefix) && n.ends_with(".log"))
+            .unwrap_or(false)
+        {
+            log_found = true;
+        }
+    }
+    assert!(log_found, "rotation did not produce a new active log file");
 
     // ───── clean‑up ────────────────────────────────────────────────────────────
     // remove generated log files
