@@ -1,4 +1,4 @@
-//! # Loggit
+//! Loggit: a zero-setup, color-aware, file-rotating logger for Rust applications.
 //!
 //! Loggit is a lightweight logging library for Rust that provides built‑in logger macros
 //! (such as `trace!`, `debug!`, `info!`, `warn!`, and `error!`) to allow you to start logging
