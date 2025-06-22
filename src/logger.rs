@@ -132,7 +132,12 @@ pub fn set_file(format: &str) -> Result<(), SetFileError> {
     Ok(())
 }
 
-/// Sets a directory to save archives of used log files
+/// ### Sets a directory to save archives of used log files
+///
+/// *Example*:
+/// ```rs
+/// let _ = set_archive_dir("log_archives");
+/// ```
 pub fn set_archive_dir(dir: &str) -> Result<PathBuf, SetArchiveDirError> {
     let config_lock = get_write_config();
     if config_lock.is_none() {
@@ -236,7 +241,7 @@ pub fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> 
     }
 }
 
-///Enables file compression for log archival.
+/// ### Enables file compression for log archival.
 ///
 ///- **Description:**  
 ///  Sets the compression type for log files. After file logging is configured, you can enable compression to archive old logs.
