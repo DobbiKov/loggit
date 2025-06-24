@@ -1,5 +1,8 @@
 # Release notes 
 
+## Version 0.1.9
+- Improved documentation
+
 ## Version 0.1.8
 - Huge performance improvement: the logic of file storage and writing has been reworked. See the [PR](https://github.com/DobbiKov/loggit/pull/23) for more information.
 

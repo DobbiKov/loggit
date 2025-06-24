@@ -20,7 +20,7 @@ Add LogGit to your Cargo.toml:
 
 ````toml
 [dependencies]
-loggit = "0.1.8"
+loggit = "0.1.9"
 ````
 
 or just write in the terminal:
