@@ -1,3 +1,9 @@
+//! Handles creation, rotation and optional compression of log files.
+//!
+//! [`FileManager`] keeps track of the current log file and ensures it is
+//! rotated when constraints are met (time, size or period). It is an internal
+//! component used by the higher level configuration functions in [`crate::logger`].
+
 use std::{
     fs::File,
     io::{self, BufReader},
@@ -19,6 +25,10 @@ use super::{
 };
 
 #[derive(Clone, Debug)]
+/// Central structure responsible for writing log records to files.
+///
+/// It owns the current log file and metadata used to decide when a new file
+/// should be created.
 pub(crate) struct FileManager {
     file_format: FileFormatter,
     file_name: FileName,
@@ -27,6 +37,7 @@ pub(crate) struct FileManager {
 }
 
 #[derive(Error, Debug)]
+/// Errors produced when creating a [`FileManager`] from a format string.
 pub enum FileManagerFromStringError {
     #[error("string parsing for the file format error: {0}")]
     FileFormatParsingError(FileFormatterTryFromStringError),

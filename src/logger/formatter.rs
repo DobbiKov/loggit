@@ -1,6 +1,13 @@
+//! Utilities for parsing user provided log formatting templates.
+//!
+//! This module converts strings like `"<green>[{level}]<green> {message}"` into
+//! [`LogFormatter`] structures used internally by the logger.  It exposes
+//! helper enums and functions to interpret color tags and placeholder blocks.
+
 use thiserror::Error;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// Colors that can be applied to portions of a formatted log message.
 pub(crate) enum LogColor {
     Red,
     Green,
@@ -56,6 +63,7 @@ impl LogColor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// A single placeholder or text fragment parsed from a format string.
 pub(crate) enum LogPart {
     Message,
     Time,
@@ -99,17 +107,27 @@ impl From<String> for LogPart {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Internal helper tying a [`LogPart`] with an optional [`LogColor`].
 pub(crate) struct LogFormatWrapper {
     pub(crate) color: Option<LogColor>,
     pub(crate) part: LogPart,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Representation of a parsed format string.
+///
+/// The struct stores a sequence of [`LogFormatWrapper`] elements that
+/// correspond to the parts of the user provided template.
 pub(crate) struct LogFormatter {
     pub(crate) parts: Vec<LogFormatWrapper>,
 }
 
 impl LogFormatter {
+    /// Parses a format template into a [`LogFormatter`].
+    ///
+    /// # Errors
+    /// Returns [`ParseStringToWrappersError`] when the string contains
+    /// unsupported placeholders or malformed color tags.
     pub(crate) fn parse_from_string(text: &str) -> Result<Self, ParseStringToWrappersError> {
         let wrappers = parse_string_to_wrappers(text)?;
         Ok(LogFormatter { parts: wrappers })
@@ -130,7 +148,10 @@ pub enum ParseStringToWrappersError {
     UnableToParsePartsToFormatter(ParsePartsToFormatterError),
 }
 
-/// Parse string to log_wrappers i.e Vec of log_part and assigned color to it
+/// Parses a template into a vector of [`LogFormatWrapper`]s.
+///
+/// The returned wrappers combine [`LogPart`] placeholders with optional
+/// [`LogColor`] information extracted from angle bracket tags.
 pub(crate) fn parse_string_to_wrappers(
     text: &str,
 ) -> Result<Vec<LogFormatWrapper>, ParseStringToWrappersError> {
@@ -146,7 +167,7 @@ pub(crate) fn parse_string_to_wrappers(
         .map_err(ParseStringToWrappersError::UnableToParsePartsToFormatter)
 }
 
-/// Parse string to log_parts
+/// Converts a template into a simple list of [`LogPart`]s.
 pub(crate) fn parse_string_to_logparts(
     text: &str,
 ) -> Result<Vec<LogPart>, ParseStringToWrappersError> {

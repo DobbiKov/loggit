@@ -1,5 +1,7 @@
-// this module aims to provide a feature of setting the config up from a file (without explicitely
-// precising it in the file (but make it still possible))
+//! Parse configuration files in `ini`, `json` or `env` formats.
+//!
+//! The resulting settings are converted into [`crate::logger`] configuration
+//! using [`InterConfig`].
 
 use std::io::Read;
 
@@ -392,6 +394,7 @@ pub(crate) fn parse_inter_config_from_serde_config(
     s_conf.try_into()
 }
 
+/// Load configuration from the specified file and apply it to the logger.
 pub(crate) fn load_config_from_file(path: &str) -> Result<(), ReadFromConfigFileError> {
     let parse_conf = parse_config_file(path)?;
     let inter_conf = parse_inter_config_from_serde_config(parse_conf)

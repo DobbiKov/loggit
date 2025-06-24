@@ -1,3 +1,8 @@
+//! Helper utilities for log file archiving.
+//!
+//! This module exposes functions to determine archive locations and ensure
+//! directories are created when needed.
+
 use std::path::PathBuf;
 
 use crate::CONFIG;

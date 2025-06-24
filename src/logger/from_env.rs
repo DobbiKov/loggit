@@ -1,3 +1,8 @@
+//! Load configuration options from environment variables.
+//!
+//! The variables follow the same naming as the configuration file fields, such
+//! as `level`, `print_to_terminal` or `file_name`.
+
 use std::env;
 
 use crate::logger::from_file_config::{parse_inter_config_from_serde_config, ConfigForSerde};
@@ -62,6 +67,7 @@ fn parse_config_from_env() -> Result<ConfigForSerde, ReadFromConfigFileError> {
     Ok(res_conf)
 }
 
+/// Read environment variables and apply them to the logger configuration.
 pub(crate) fn load_config_from_env() -> Result<(), ReadFromConfigFileError> {
     let serde_conf = parse_config_from_env()?;
     let inter_conf = parse_inter_config_from_serde_config(serde_conf)

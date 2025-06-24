@@ -1,3 +1,9 @@
+//! Representation and manipulation of log file names.
+//!
+//! [`FileName`] constructs a concrete file name from a pattern provided by
+//! [`FileFormatter`]. It also supports incrementing the name when multiple files
+//! with the same base name are created.
+
 use crate::{helper, Level};
 
 use crate::logger::formatter::LogPart;
@@ -5,6 +11,7 @@ use crate::logger::formatter::LogPart;
 use super::file_formatter::FileFormatter;
 use thiserror::Error;
 #[derive(Debug, Clone)]
+/// File name generated from a [`FileFormatter`] pattern.
 pub(crate) struct FileName {
     file_name: String,
     file_num: Option<u32>,
@@ -12,6 +19,7 @@ pub(crate) struct FileName {
 }
 
 #[derive(Debug, Error)]
+/// Errors that can occur while converting a [`FileFormatter`] into a file name.
 pub enum FileNameFromFileFormatterError {
     #[error("no fomrat provided")]
     NoFormatProvided,
@@ -39,7 +47,7 @@ impl FileName {
             Some(num) => self.file_num = Some(num + 1),
         };
     }
-    // pub(crate)
+    /// Expands a list of [`LogPart`] values into a concrete file name string.
     pub fn get_string_from_log_parts(parts: Vec<LogPart>, level: Level) -> String {
         let time_str = helper::get_current_time_in_string();
         let date_str = helper::get_current_date_in_string();
@@ -59,7 +67,7 @@ impl FileName {
         }
         res
     }
-    //pub(crate)
+    /// Build a [`FileName`] from a [`FileFormatter`] using the provided log level.
     pub fn from_file_formatter(
         format: FileFormatter,
         level: Level,
@@ -99,6 +107,7 @@ impl FileName {
             file_extension: extension.to_string(),
         })
     }
+    /// Returns the full file name including any appended index and extension.
     pub(crate) fn get_full_file_name(&self) -> String {
         String::from(self.to_owned())
     }
