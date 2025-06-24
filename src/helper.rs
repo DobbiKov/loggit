@@ -1,3 +1,5 @@
+//! Internal helper functions for time handling and file I/O.
+
 use chrono::{self, Datelike, Timelike};
 use std::io::Write;
 use thiserror::Error;

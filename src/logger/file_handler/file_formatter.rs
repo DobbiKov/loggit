@@ -1,13 +1,21 @@
+//! Parser for file name templates used when creating log files.
+//!
+//! [`FileFormatter`] validates that a user supplied pattern is safe for file
+//! creation and produces a sequence of [`LogPart`]s that can later be expanded
+//! into a concrete file name.
+
 use crate::logger::formatter::LogPart;
 
 use thiserror::Error;
 
 #[derive(Clone, Debug)]
+/// Internal representation of a validated file name pattern.
 pub(crate) struct FileFormatter {
     pub(crate) format: Vec<LogPart>,
 }
 
 #[derive(Debug, Error)]
+/// Errors that can occur while parsing a file name template.
 pub enum FileFormatterTryFromStringError {
     #[error("an incorrect character given: {0}")]
     IncorrectCharacterGiven(char),
@@ -26,6 +34,10 @@ impl FileFormatter {
     fn forbidden_characters() -> [char; 4] {
         ['<', '>', '&', '%']
     }
+    /// Parses a template string into a [`FileFormatter`].
+    ///
+    /// Ensures that only allowed placeholders are present and that the
+    /// resulting file name ends with a valid extension (`.txt` or `.log`).
     pub(crate) fn try_from_string(
         format: &str,
     ) -> Result<FileFormatter, FileFormatterTryFromStringError> {

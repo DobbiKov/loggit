@@ -1,3 +1,5 @@
+//! Error types used throughout the configuration helpers.
+
 use crate::logger;
 use thiserror::Error;
 
@@ -6,6 +8,7 @@ use super::{
 };
 
 #[derive(Debug, thiserror::Error)]
+/// Errors while accessing or mutating the global configuration.
 pub enum AccessError {
     #[error("unable to load config")]
     LoadConfig,
