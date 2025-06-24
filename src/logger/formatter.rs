@@ -179,7 +179,7 @@ pub(crate) fn parse_string_to_logparts(
 // The fundamental parser logic
 
 #[derive(Debug)]
-pub enum ParseSymbs {
+enum ParseSymbs {
     Start,
     AndNext(Box<ParseSymbs>, Box<ParseSymbs>),
     AngleOpen,
@@ -196,7 +196,7 @@ impl From<ParseSymbs> for Vec<ParseSymbs> {
 }
 
 #[derive(Debug)]
-pub enum ParseParts {
+enum ParseParts {
     End,
     Text(String),
     Color(String),
