@@ -89,6 +89,6 @@ pub(crate) enum WriteToFileError {
     #[error("unexpected error")]
     UnexpectedError(std::io::Error),
 }
-pub(crate) fn write_to_file(file: &mut std::fs::File, text: &str) -> Result<(), WriteToFileError> {
+pub(crate) fn write_to_file(file: &mut impl std::io::Write, text: &str) -> Result<(), WriteToFileError> {
     writeln!(file, "{}", text).map_err(WriteToFileError::UnexpectedError)
 }

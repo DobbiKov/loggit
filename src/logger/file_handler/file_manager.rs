@@ -303,13 +303,12 @@ impl FileManager {
                 // left part from
                 // last_idx again
                 idx = 0;
+                if (idx as i32) == last_idx {
+                    // wrapped all the way back to the triggering constraint:
+                    // every other constraint has been reset, we're done
+                    break;
+                }
             }
-            if last_idx == 0 {
-                // if last_idx == 0 then the first one wasn't satisfied and it was
-                // immediately handled
-                break;
-            }
-
             //each rot logic
 
             let rot = self.file_constraints.rotation[idx];
@@ -398,12 +397,8 @@ impl FileManager {
             }
         };
 
-        let arc_file = self.curr_file.clone();
-        let mut file = (*arc_file).try_clone().map_err(|e| WriteLogError::UnableToWriteToFile(WriteToFileError::UnexpectedError(e)))?;
-        helper::write_to_file(&mut file, mess)
+        helper::write_to_file(&mut &*self.curr_file, mess)
             .map_err(WriteLogError::UnableToWriteToFile)?;
-
-        self.set_curr_file(file);
 
         verify_res.map_err(WriteLogError::VerifyConstraintsError)
     }

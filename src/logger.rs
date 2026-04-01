@@ -53,7 +53,7 @@ where
             .ok_or(AccessError::FileNotSet)?
             .clone()
     };
-    let mut guard = fm_arc.lock().unwrap(); // poisoned = panic, fine for logger
+    let mut guard = fm_arc.lock().unwrap_or_else(|e| e.into_inner());
     f(&mut guard)
 }
 
@@ -62,15 +62,7 @@ fn get_log_level() -> Level {
     get_config().level
 }
 fn get_config() -> RwLockReadGuard<'static, Config> {
-    let config_lock = match CONFIG.read() {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("Problem with getting config, here's an error: {}", e);
-            panic!("Poisoned lock")
-        }
-    };
-
-    config_lock
+    CONFIG.read().unwrap_or_else(|e| e.into_inner())
 }
 
 fn get_log_format(level: Level) -> LogFormatter {
